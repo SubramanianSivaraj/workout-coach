@@ -63,14 +63,23 @@ or serve the repo folder directly.
       bench MESH is session 3 scope (equipment)
 - [x] Commit: "v5 s2: rigged mannequin animates side-plane exercises"
 
-### Session 3 — Sun AM: all 28 exercises + equipment
-- [ ] `p3` abduction overrides for ex-front-mode exercises (lateral raises,
-      upright row) and flyes — real out-to-the-side arm movement
-- [ ] Equipment meshes: dumbbell, deadlift bar plates, EZ bar, bench
-      (flat/incline/decline from pose torso angle), support bench/seat props
-- [ ] Sweep all 28 exercises in 3D; fix pose glitches; keep a checklist in the
-      commit message of any exercise left visually rough
-- [ ] Commit: "v5 s3: all exercises in 3D with equipment"
+### Session 3 — Sun AM: all 28 exercises + equipment ✅ DONE
+- [x] pose3() adapter (instead of per-pose `p3` overrides — cleaner): front
+      mode → standing body + abd/fabd from the 2D ua/fa; flye → lying body,
+      arms vertical + abd from `a`; Russian twists get real torso Y-twist.
+      rig.apply() gained abd/fabd (rotation.x, ±s) and twist (torso rotation.y)
+- [x] Equipment: dumbbells (handle + accent plates) attached to rig hand
+      groups (both hands unless *2 arm fields exist, e.g. one-arm row);
+      barbell/EZ bar spanning both hands with sized plates (15/8 units);
+      lying bench derived from torso angle (mirror of SVG drawBenchAuto) —
+      handles flat/incline/decline automatically; support props (row bench,
+      Bulgarian bench, curl seat) as boxes from the 2D rect coords
+- [x] Swept all 28: every one mounts, animates, disposes; console clean.
+      Visually rough (acceptable, note for s4/s5 polish pass): one-arm row
+      far-hand-to-bench alignment approximate; Russian twist dumbbells overlap
+      at center; lateral-raise dumbbells rotate with the arm (real ones stay
+      level) — all cosmetic, none blocking
+- [x] Commit: "v5 s3: all exercises in 3D with equipment"
 
 ### Session 4 — Sun PM: parity polish + integration
 - [ ] Working-muscle glow: emissive pulse on the relevant body mesh (map from
@@ -109,3 +118,13 @@ or serve the repo folder directly.
   each elbow for attaching dumbbells/bars; bench mesh needed under lying
   exercises (derive from torso angle like SVG drawBenchAuto); (3) far-side
   material is dimmed accent (×.55) for side-readability, matches 2D.
+- 2026-07-07 (s3): Session 3 complete. All 28 exercises 3D-capable (can3D gate
+  fully open), equipment + benches render, front/flye adapters produce real
+  abduction (flye & lateral raise verified visually — the marquee shots).
+  Handoff to s4: glow → suggest emissive pulse on nearest body capsule mapped
+  from ex.mus[0]; traces → sample near-hand world position via
+  hand.getWorldPosition across pose t=0..1; labels → absolutely-positioned div
+  over the stage reusing PH + si from the 3D loop (expose si on T3); workout
+  mode → woRender exercise phase needs the same toggle/canvas plumbing as the
+  modal (share applyStageMode-like helper); perf → pause loop on
+  visibilitychange, cap DPR already done, dispose verified.
