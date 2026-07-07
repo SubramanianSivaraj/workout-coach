@@ -103,6 +103,11 @@
   .stage .live::before{content:"";width:7px;height:7px;border-radius:50%;background:#34d399;
     animation:pulse 1.4s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .t3-toggle{position:absolute;bottom:10px;right:12px;z-index:2;background:#12151e;
+    border:1px solid var(--line);color:var(--muted);font-size:11px;font-weight:800;
+    letter-spacing:.08em;padding:6px 13px;border-radius:999px;cursor:pointer;font-family:inherit}
+  .t3-toggle.on{color:#0b0d12;border-color:transparent}
+  .stage canvas{display:block;width:100%;height:auto;touch-action:none}
   .wrow{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;
     padding:12px 14px;display:flex;align-items:center;gap:10px}
   .wrow label{font-size:12.5px;color:var(--muted);flex:1;line-height:1.4}
@@ -261,6 +266,7 @@
     <div class="rx" id="m-rx"></div>
     <div class="stage">
       <span class="live">Demo</span>
+      <button class="t3-toggle" id="t3-toggle" style="display:none">3D</button>
       <svg id="stage-svg" viewBox="0 26 320 250" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
     <div id="m-weight"></div>
@@ -1034,10 +1040,11 @@ function openSheet(i){
   st.textContent=`.cues li::before{color:${day.color}}`;
   overlay.classList.add("open");sheet.classList.add("open");
   document.body.style.overflow="hidden";
-  animate(document.getElementById("stage-svg"),ex,day.color);
+  SHEET={ex,day};
+  applyStageMode();
 }
 function closeSheet(){overlay.classList.remove("open");sheet.classList.remove("open");
-  document.body.style.overflow="";cancelAnimationFrame(rafId)}
+  document.body.style.overflow="";cancelAnimationFrame(rafId);hide3D();SHEET=null}
 overlay.onclick=closeSheet;
 document.getElementById("m-close").onclick=closeSheet;
 
@@ -1237,9 +1244,132 @@ function advance(){
   W.phase="exercise";woRender();
 }
 
+/* ================= 3D demos (v5, progressive enhancement) ================= */
+/* three.js loads as a module (see bridge script below); if it or WebGL is
+   unavailable the SVG demos simply remain — nothing else changes. */
+let SHEET=null, T3=null;
+window.addEventListener("three-ready",()=>{if(SHEET)applyStageMode()});
+function webglOK(){try{const c=document.createElement("canvas");
+  return !!(c.getContext("webgl2")||c.getContext("webgl"))}catch(e){return false}}
+function can3D(ex){ /* session 1: Overhead Press only; widened in later sessions */
+  return ex.n==="Overhead Press"&&!!window.THREE&&webglOK();
+}
+function applyStageMode(){
+  if(!SHEET)return;
+  const {ex,day}=SHEET;
+  const svg=document.getElementById("stage-svg"), tb=document.getElementById("t3-toggle");
+  const ok=can3D(ex);
+  tb.style.display=ok?"block":"none";
+  const on=ok&&ls.get("wc-3d")==="1";
+  tb.classList.toggle("on",on);
+  tb.style.background=on?day.g:"";
+  if(on){cancelAnimationFrame(rafId);svg.style.display="none";show3D(ex,day)}
+  else{hide3D();svg.style.display="";animate(svg,ex,day.color)}
+}
+document.getElementById("t3-toggle").onclick=()=>{
+  if(ls.get("wc-3d")==="1")ls.del("wc-3d");else ls.set("wc-3d","1");
+  applyStageMode();
+};
+function buildMannequin(accent){
+  const THREE=window.THREE, S=1/50, G=new THREE.Group();
+  const skin=new THREE.MeshStandardMaterial({color:0xe8ecf7,roughness:.55,metalness:.05});
+  const acc=new THREE.MeshStandardMaterial({color:new THREE.Color(accent),roughness:.5,metalness:.05});
+  const cap=(len,r,m)=>{const me=new THREE.Mesh(new THREE.CapsuleGeometry(r,len,6,14),m);
+    me.castShadow=true;return me};
+  const hipY=88*S, shY=hipY+55*S;
+  const torso=cap(55*S,9.5*S,skin);torso.position.y=(hipY+shY)/2;G.add(torso);
+  const hips=cap(16*S,7*S,skin);hips.rotation.z=Math.PI/2;hips.position.y=hipY;G.add(hips);
+  const sho=cap(22*S,6.5*S,skin);sho.rotation.z=Math.PI/2;sho.position.y=shY;G.add(sho);
+  const neck=cap(9*S,4*S,skin);neck.position.y=shY+7*S;G.add(neck);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(10.5*S,20,16),skin);
+  head.castShadow=true;head.position.y=shY+(9+10.5)*S;G.add(head);
+  for(const s of[-1,1]){
+    const ax=s*16*S;
+    const ua=cap(34*S,5.5*S,acc);ua.position.set(ax,shY-17*S,0);ua.rotation.z=s*.12;G.add(ua);
+    const fa=cap(30*S,4.6*S,acc);fa.position.set(ax+s*7*S,shY-49*S,0);fa.rotation.z=s*.16;G.add(fa);
+    const lx=s*8*S;
+    const th=cap(46*S,7*S,acc);th.position.set(lx,hipY-23*S,0);G.add(th);
+    const sg=cap(42*S,5.5*S,acc);sg.position.set(lx,hipY-67*S,0);G.add(sg);
+    const ft=cap(16*S,4.5*S,acc);ft.rotation.x=Math.PI/2;ft.position.set(lx,4.5*S,7*S);G.add(ft);
+  }
+  return G;
+}
+function show3D(ex,day){
+  hide3D();
+  const THREE=window.THREE;
+  const stage=sheet.querySelector(".stage");
+  const w=stage.clientWidth||340, h=Math.round(w*250/320);
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+  renderer.setSize(w,h);
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  stage.appendChild(renderer.domElement);
+  const scene=new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff,0x2a3045,1.15));
+  const dir=new THREE.DirectionalLight(0xffffff,1.6);
+  dir.position.set(3,6,4);dir.castShadow=true;
+  dir.shadow.mapSize.set(1024,1024);
+  dir.shadow.camera.left=-3;dir.shadow.camera.right=3;
+  dir.shadow.camera.top=5;dir.shadow.camera.bottom=-1;
+  scene.add(dir);
+  const floor=new THREE.Mesh(new THREE.CircleGeometry(2.6,48),
+    new THREE.MeshStandardMaterial({color:0x181d2b,roughness:.92}));
+  floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+  scene.add(buildMannequin(day.color));
+  const cam=new THREE.PerspectiveCamera(38,w/h,.1,50);
+  const st={renderer,scene,cam,az:-.55,pol:1.22,dist:6.4,ty:1.75,user:false,raf:0,
+            canvas:renderer.domElement,ptrs:new Map(),pd:0};
+  const cv=st.canvas;
+  cv.addEventListener("pointerdown",e=>{cv.setPointerCapture(e.pointerId);
+    st.ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+    if(st.ptrs.size===2){const p=[...st.ptrs.values()];st.pd=Math.hypot(p[0][0]-p[1][0],p[0][1]-p[1][1])}});
+  cv.addEventListener("pointermove",e=>{
+    if(!st.ptrs.has(e.pointerId))return;
+    const prev=st.ptrs.get(e.pointerId);st.ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+    st.user=true;
+    if(st.ptrs.size===1){
+      st.az-=(e.clientX-prev[0])*.006;
+      st.pol=Math.min(1.5,Math.max(.35,st.pol-(e.clientY-prev[1])*.004));
+    }else if(st.ptrs.size===2){
+      const p=[...st.ptrs.values()];const d=Math.hypot(p[0][0]-p[1][0],p[0][1]-p[1][1]);
+      if(st.pd)st.dist=Math.min(11,Math.max(3.2,st.dist*st.pd/d));st.pd=d;
+    }});
+  const drop=e=>{st.ptrs.delete(e.pointerId);st.pd=0};
+  cv.addEventListener("pointerup",drop);cv.addEventListener("pointercancel",drop);
+  cv.addEventListener("wheel",e=>{e.preventDefault();st.user=true;
+    st.dist=Math.min(11,Math.max(3.2,st.dist*(1+e.deltaY*.001)))},{passive:false});
+  function loop(){
+    if(!st.user)st.az+=.0035;
+    cam.position.set(st.dist*Math.sin(st.pol)*Math.sin(st.az),
+                     st.ty+st.dist*Math.cos(st.pol),
+                     st.dist*Math.sin(st.pol)*Math.cos(st.az));
+    cam.lookAt(0,st.ty,0);
+    renderer.render(scene,cam);
+    st.raf=requestAnimationFrame(loop);
+  }
+  st.raf=requestAnimationFrame(loop);
+  T3=st;
+}
+function hide3D(){
+  if(!T3)return;
+  cancelAnimationFrame(T3.raf);
+  T3.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();
+    if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose())}});
+  T3.renderer.dispose();
+  T3.canvas.remove();
+  T3=null;
+}
+
 /* ================= boot ================= */
 render();
 if(!ls.get("wc-profile"))openSetup(true);
+</script>
+<script type="module">
+/* three.js bridge: module build (UMD discontinued upstream). If this file is
+   missing or blocked, the app runs fine with SVG demos only. */
+import * as THREE from "./three.module.min.js";
+window.THREE=THREE;
+window.dispatchEvent(new Event("three-ready"));
 </script>
 </body>
 </html>

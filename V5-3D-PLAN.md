@@ -34,17 +34,18 @@ or serve the repo folder directly.
 
 ## Sessions
 
-### Session 1 — Sat AM: scene foundation
-- [ ] Download three.js (r170+ minified) into repo as `three.min.js`; wire
-      `<script>` load + WebGL capability check + graceful SVG fallback
-- [ ] 3D stage: renderer (pixelRatio capped at 2), scene, key/fill lights,
-      floor disc with soft shadow, day-accent fog/backdrop matching app theme
-- [ ] Custom drag-orbit + pinch zoom + slow idle auto-rotate
-- [ ] Static standing mannequin from primitives (torso, head, pelvis, 2×arm,
-      2×leg with joints) using LEN proportions
-- [ ] "3D" toggle button in demo modal stage (persist in `wc-3d`); shows
-      mannequin for Overhead Press only at this stage
-- [ ] Commit: "v5 s1: three.js scene, mannequin, orbit, modal toggle"
+### Session 1 — Sat AM: scene foundation ✅ DONE
+- [x] three.js r170 vendored as `three.module.min.js` (UMD builds discontinued
+      upstream; loaded via a `<script type="module">` bridge that sets
+      `window.THREE` and fires `three-ready`) + WebGL check + SVG fallback
+- [x] 3D stage: renderer (pixelRatio capped at 2), hemi+directional lights,
+      floor disc with PCF soft shadow, transparent canvas over stage gradient
+- [x] Custom drag-orbit + pinch zoom (pointer events) + slow idle auto-rotate
+- [x] Static standing mannequin from primitives (torso, hips, shoulders, neck,
+      head, 2×arm, 2×leg, feet) using LEN proportions, skin/accent materials
+- [x] "3D" toggle in demo modal stage (persists in `wc-3d`), Overhead Press
+      only via `can3D()` gate; full dispose on toggle-off/close (verified)
+- [x] Commit: "v5 s1: three.js scene, mannequin, orbit, modal toggle"
 
 ### Session 2 — Sat PM: rig + pose mapping
 - [ ] Joint hierarchy (pelvis→torso→head, shoulders→elbows, hips→knees→ankles)
@@ -87,3 +88,9 @@ or serve the repo folder directly.
 
 ## Status log
 - 2026-07-07: Plan created, branch `v5-3d` pushed. Nothing built yet.
+- 2026-07-07 (s1): Session 1 complete. 3D scene + static mannequin + orbit +
+  modal toggle all verified in preview (load, toggle both ways, dispose on
+  close, toggle hidden on non-3D exercises, console clean). Note for s2: the
+  mannequin in buildMannequin() is positioned directly (no joint hierarchy) —
+  s2 should restructure it into pivot groups (shoulder/elbow/hip/knee) before
+  posing. can3D() gate currently allows Overhead Press only — widen in s3.
