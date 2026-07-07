@@ -16,12 +16,18 @@
   body{padding-bottom:40px}
   .wrap{max-width:520px;margin:0 auto;padding:0 16px}
 
-  header{padding:26px 0 14px}
+  header{padding:26px 0 10px;position:relative}
   .eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);font-weight:600}
   h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:4px}
   h1 .accent{background:linear-gradient(90deg,#ff5c7a,#a78bfa,#22d3ee);
     -webkit-background-clip:text;background-clip:text;color:transparent}
   .sub{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.5}
+  .gear{position:absolute;top:24px;right:0;width:38px;height:38px;border-radius:12px;
+    background:var(--card);border:1px solid var(--line);color:var(--muted);font-size:17px;
+    cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .profile-chip{margin-top:10px;display:inline-flex;align-items:center;gap:7px;
+    background:var(--card);border:1px solid var(--line);border-radius:999px;
+    padding:7px 13px;font-size:12px;font-weight:600;color:#c6cbda;cursor:pointer}
 
   .days{display:flex;gap:8px;overflow-x:auto;padding:14px 0 6px;scrollbar-width:none}
   .days::-webkit-scrollbar{display:none}
@@ -49,7 +55,7 @@
     font-weight:800;font-size:15px;color:#0b0d12;flex:0 0 auto}
   .card .info{flex:1;min-width:0}
   .card .name{font-weight:700;font-size:15px}
-  .card .meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .card .meta{font-size:12px;color:var(--muted);margin-top:2px;font-weight:600}
   .card .desc{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.45}
   .card .play{flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--line);
     display:flex;align-items:center;justify-content:center}
@@ -84,6 +90,11 @@
     padding:4px 10px;border-radius:999px;color:#0b0d12}
   .sheet h2{font-size:21px;font-weight:800;margin:10px 0 2px;letter-spacing:-.01em}
   .sheet .reps{font-size:13px;color:var(--muted);font-weight:600}
+  .rx{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .rx .pill{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:8px 12px;font-size:12px;font-weight:600;color:#d6dae6}
+  .rx .pill b{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:2px;font-weight:700}
   .stage{margin:16px 0 4px;background:radial-gradient(120% 100% at 50% 0%, #1b2030 0%, #12151e 70%);
     border:1px solid var(--line);border-radius:20px;overflow:hidden;position:relative}
   .stage svg{display:block;width:100%;height:auto}
@@ -92,7 +103,16 @@
   .stage .live::before{content:"";width:7px;height:7px;border-radius:50%;background:#34d399;
     animation:pulse 1.4s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-  .muscles{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .wrow{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:12px 14px;display:flex;align-items:center;gap:10px}
+  .wrow label{font-size:12.5px;color:var(--muted);flex:1;line-height:1.4}
+  .wrow input{width:76px;background:#12151e;border:1px solid var(--line);border-radius:10px;
+    color:var(--text);font-size:15px;font-weight:700;padding:9px 10px;text-align:center;
+    font-family:inherit;-moz-appearance:textfield}
+  .wrow input::-webkit-outer-spin-button,.wrow input::-webkit-inner-spin-button{-webkit-appearance:none}
+  .wrow .kg{font-size:12px;color:var(--muted);font-weight:700}
+  .wnudge{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.5;padding:0 4px}
+  .muscles{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
   .muscles h4{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
   .muscles .mrow{display:flex;align-items:center;gap:10px}
   .muscles svg{flex:0 0 150px}
@@ -104,6 +124,42 @@
   .cues li::before{content:"✓";position:absolute;left:2px;font-weight:800;font-size:12px}
   .close-btn{margin:18px 20px 4px;width:calc(100% - 40px);padding:14px;border:none;border-radius:14px;
     font-size:15px;font-weight:700;color:#0b0d12;cursor:pointer}
+
+  /* ---- setup / settings ---- */
+  .setup{position:fixed;inset:0;z-index:80;background:var(--bg);display:none;overflow-y:auto}
+  .setup.open{display:block}
+  .setup-inner{max-width:520px;margin:0 auto;padding:30px 20px max(26px, env(safe-area-inset-bottom))}
+  .setup h2{font-size:24px;font-weight:800;letter-spacing:-.02em}
+  .setup .s-sub{color:var(--muted);font-size:13px;line-height:1.55;margin-top:8px}
+  .setup h4{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+    margin:24px 0 10px;font-weight:700}
+  .opts{display:flex;flex-direction:column;gap:9px}
+  .opts.row{flex-direction:row}
+  .opt{background:var(--card);border:1.5px solid var(--line);border-radius:15px;padding:14px;
+    cursor:pointer;text-align:left;color:var(--text);font-family:inherit;flex:1}
+  .opt .o-name{font-size:14.5px;font-weight:700}
+  .opt .o-desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45}
+  .opt.sel{border-color:#a78bfa;background:#a78bfa14}
+  .opt.sel .o-name{color:#c4b5fd}
+  .switch-row{display:flex;align-items:center;gap:12px;background:var(--card);
+    border:1px solid var(--line);border-radius:15px;padding:14px}
+  .switch-row .s-txt{flex:1}
+  .switch-row .o-name{font-size:14px;font-weight:700}
+  .switch-row .o-desc{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.45}
+  .sw{position:relative;width:48px;height:28px;border-radius:999px;background:var(--line);
+    border:none;cursor:pointer;flex:0 0 auto;transition:background .2s}
+  .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+    background:#8b93a7;transition:all .2s}
+  .sw.on{background:#a78bfa}
+  .sw.on::after{left:23px;background:#0b0d12}
+  .erase{margin-top:10px;width:100%;background:none;border:1px dashed var(--line);border-radius:13px;
+    padding:11px;color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .setup-save{margin-top:26px;width:100%;border:none;border-radius:16px;padding:16px;
+    font-size:15px;font-weight:800;color:#0b0d12;cursor:pointer;
+    background:linear-gradient(90deg,#ff5c7a,#a78bfa)}
+  .setup-skip{margin-top:12px;width:100%;background:none;border:none;color:var(--muted);
+    font-size:13px;font-weight:600;cursor:pointer;padding:8px;font-family:inherit}
+  .s-note{margin-top:16px;font-size:11px;color:#5b647c;line-height:1.6;text-align:center}
 
   /* ---- workout mode ---- */
   .wo{position:fixed;inset:0;z-index:70;background:var(--bg);display:none;overflow-y:auto}
@@ -121,6 +177,8 @@
   .wo .stage{margin-top:14px}
   .wo-cue{margin-top:12px;font-size:13px;color:var(--muted);line-height:1.55;
     padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+  .wo-weight{margin-top:10px;font-size:13px;font-weight:700;padding:10px 14px;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;color:#d6dae6}
   .wo-actions{margin-top:auto;padding-top:18px}
   .wo-btn{width:100%;border:none;border-radius:16px;padding:17px;font-size:16px;font-weight:800;
     color:#0b0d12;cursor:pointer}
@@ -128,7 +186,6 @@
   .wo-sub button{flex:1;background:var(--card);border:1px solid var(--line);border-radius:13px;
     padding:12px;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer}
 
-  /* rest phase */
   .rest-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
   .rest-label{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700}
   .ring{position:relative;width:230px;height:230px;margin:22px 0}
@@ -139,7 +196,6 @@
   .next-up{font-size:14px;color:var(--muted)}
   .next-up b{color:var(--text)}
 
-  /* GO phase */
   .wo.go .wo-inner{justify-content:center;align-items:center;text-align:center;cursor:pointer}
   .go-big{font-size:78px;font-weight:900;letter-spacing:-.03em;color:#0b0d12;
     animation:gopulse 1s ease-in-out infinite}
@@ -148,7 +204,6 @@
     color:rgba(8,10,14,.65);animation:gopulse 1s ease-in-out infinite}
   @keyframes gopulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
 
-  /* done phase */
   .done-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
   .done-wrap .emoji{font-size:56px}
   .done-wrap h2{margin-top:14px}
@@ -160,9 +215,11 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">6-Day Split · Intermediate</div>
+    <div class="eyebrow">6-Day Split</div>
     <h1>Workout <span class="accent">Coach</span></h1>
+    <button class="gear" id="gear" title="Settings">⚙︎</button>
     <div class="sub">Tap an exercise for its movement demo, or start guided workout mode — silent rest timers that never touch your music.</div>
+    <button class="profile-chip" id="profile-chip"></button>
   </header>
 
   <nav class="days" id="days"></nav>
@@ -185,14 +242,13 @@
   <section class="guidelines">
     <h3>General Guidelines</h3>
     <ul>
-      <li><b>Rest:</b> 60–90 s between sets · 2 min on big lifts (bench, squat, deadlift).</li>
       <li><b>Warm-up:</b> 5 min dynamic — jumping jacks, bodyweight squats, arm swings.</li>
       <li><b>Cool-down:</b> stretch chest, back, hamstrings, shoulders.</li>
       <li><b>Progressive overload:</b> add weight or reps gradually.</li>
       <li><b>Form first:</b> technique always beats heavier weight.</li>
     </ul>
   </section>
-  <footer>Workout Coach v2 · self-contained · works offline · share this file freely</footer>
+  <footer>Workout Coach v3 · self-contained · works offline · your settings never leave this device</footer>
 </div>
 
 <div class="overlay" id="overlay"></div>
@@ -202,10 +258,12 @@
     <span class="tag" id="m-tag"></span>
     <h2 id="m-name"></h2>
     <div class="reps" id="m-reps"></div>
+    <div class="rx" id="m-rx"></div>
     <div class="stage">
       <span class="live">Demo</span>
       <svg id="stage-svg" viewBox="0 26 320 250" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
+    <div id="m-weight"></div>
     <div class="muscles"><h4>Muscles worked</h4>
       <div class="mrow"><div id="m-body"></div><div class="mchips" id="m-chips"></div></div>
     </div>
@@ -214,10 +272,60 @@
   <button class="close-btn" id="m-close">Done</button>
 </div>
 
+<div class="setup" id="setup">
+  <div class="setup-inner">
+    <h2 id="setup-title">Make it yours</h2>
+    <p class="s-sub">Two quick questions and the whole plan — reps, rest times, session length — adapts to you. Saved only on this device.</p>
+    <h4>My goal</h4>
+    <div class="opts" id="opt-goal">
+      <button class="opt" data-v="m"><div class="o-name">💪 Build muscle</div>
+        <div class="o-desc">8–12 reps · moderate rest · leave 2 reps in the tank</div></button>
+      <button class="opt" data-v="s"><div class="o-name">🏋️ Get stronger</div>
+        <div class="o-desc">4–6 heavy reps on big lifts · long rests · slow and controlled</div></button>
+      <button class="opt" data-v="e"><div class="o-name">🔥 Tone &amp; endurance</div>
+        <div class="o-desc">15–20 reps · short rests · steady burn</div></button>
+    </div>
+    <h4>Session length</h4>
+    <div class="opts row" id="opt-time">
+      <button class="opt" data-v="30"><div class="o-name">30 min</div><div class="o-desc">essentials only</div></button>
+      <button class="opt" data-v="45"><div class="o-name">45 min</div><div class="o-desc">the full plan</div></button>
+      <button class="opt" data-v="60"><div class="o-name">60 min</div><div class="o-desc">extra volume</div></button>
+    </div>
+    <h4>Weights</h4>
+    <div class="switch-row">
+      <div class="s-txt"><div class="o-name">Remember my working weights</div>
+        <div class="o-desc">Shows your last weight per exercise with overload hints. Stored only in this phone's browser — never uploaded anywhere.</div></div>
+      <button class="sw" id="sw-weights"></button>
+    </div>
+    <button class="erase" id="erase-w" style="display:none">Erase all saved weights from this device</button>
+    <button class="setup-save" id="setup-save">Save my plan</button>
+    <button class="setup-skip" id="setup-skip" style="display:none">Skip — use the standard plan</button>
+    <p class="s-note">You can change all of this anytime via the ⚙︎ button.<br>Nothing is tracked, logged or sent — this page has no server.</p>
+  </div>
+</div>
+
 <div class="wo" id="wo"><div class="wo-inner" id="wo-inner"></div></div>
 
 <script>
 "use strict";
+/* ================= profile & storage ================= */
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},
+          set(k,v){try{localStorage.setItem(k,v)}catch(e){}},
+          del(k){try{localStorage.removeItem(k)}catch(e){}},
+          keys(){try{return Object.keys(localStorage)}catch(e){return[]}}};
+let P={goal:"m",time:45};
+try{const p=JSON.parse(ls.get("wc-profile"));if(p&&p.goal&&p.time)P=p}catch(e){}
+let weightsOn=ls.get("wc-weights")==="1";
+
+const GOAL_META={
+ m:{label:"Build muscle",emoji:"💪",
+    rpe:"RPE 8 — leave 2 reps in the tank",tempo:"2 s down · 1 s up",restX:1},
+ s:{label:"Get stronger",emoji:"🏋️",
+    rpe:"RPE 8–9 — heavy but crisp",tempo:"3 s down · drive up fast",restX:1.4},
+ e:{label:"Tone & endurance",emoji:"🔥",
+    rpe:"RPE 7 — steady burn, keep moving",tempo:"1 s down · 1 s up",restX:0.5}
+};
+
 /* ================= data ================= */
 const DAYS=[
  {d:"Mon",name:"Chest",color:"#ff5c7a",g:"linear-gradient(135deg,#ff5c7a,#ff8f6b)"},
@@ -234,35 +342,36 @@ const MUSCLE_LABEL={chest:"Chest",fdelt:"Front Delts",sdelt:"Side Delts",rdelt:"
  glutes:"Glutes",calves:"Calves"};
 
 /* pose fields (side view): px,py pelvis · torso/head angle (0 up, + fwd) ·
-   ua/fa arm, th/sh leg (0 down, +fwd, dirDown) · *2 = far limb · ft foot angle */
+   ua/fa arm, th/sh leg (0 down, +fwd, dirDown) · *2 = far limb · ft foot angle
+   kind: compound | iso | timed · pri: 30-min priority (1 = kept first) */
 const S={px:150,py:170,torso:3,ua:0,fa:0,th:0,sh:0,ft:78};
 
 const EX={
  Mon:[
-  {n:"Flat Bench Press",sets:"3–4 × 8–12",nsets:4,rest:120,grip:"db",bench:"auto",
+  {n:"Flat Bench Press",sets:"3–4 × 8–12",nsets:4,rest:120,kind:"compound",pri:1,grip:"db",bench:"auto",
    mus:["chest","fdelt","triceps"],
    desc:"Lie flat, feet planted, lower to mid-chest, press up.",
    cues:["Elbows ~45° from torso","Wrists straight, stacked over elbows","Core tight, feet on the ground"],
    poses:[{px:165,py:183,torso:-90,ua:38,fa:187,th:55,sh:-5,ft:60},
           {px:165,py:183,torso:-90,ua:186,fa:184,th:55,sh:-5,ft:60}]},
-  {n:"Incline Bench Press",sets:"3–4 × 8–12",nsets:4,rest:120,grip:"db",bench:"auto",
+  {n:"Incline Bench Press",sets:"3–4 × 8–12",nsets:4,rest:120,kind:"compound",pri:2,grip:"db",bench:"auto",
    mus:["chest","fdelt","triceps"],
    desc:"Bench at 30–45°, lower to upper chest, press up.",
    cues:["Target the upper chest","Don't flare the elbows","Control the descent"],
    poses:[{px:160,py:203,torso:-52,ua:30,fa:192,th:45,sh:0,ft:60},
           {px:160,py:203,torso:-52,ua:196,fa:192,th:45,sh:0,ft:60}]},
-  {n:"Decline Bench Press",sets:"3 × 8–12",nsets:3,rest:120,grip:"db",bench:"auto",
+  {n:"Decline Bench Press",sets:"3 × 8–12",nsets:3,rest:120,kind:"compound",pri:4,grip:"db",bench:"auto",
    mus:["chest","triceps"],
    desc:"Bench declined 20–30°, press from the lower chest.",
    cues:["Builds lower-chest thickness","Keep shoulder blades pinned","Smooth, even tempo"],
    poses:[{px:150,py:178,torso:-115,ua:38,fa:187,th:72,sh:55,ft:40},
           {px:150,py:178,torso:-115,ua:184,fa:182,th:72,sh:55,ft:40}]},
-  {n:"Dumbbell Flyes",sets:"3 × 10–12",nsets:3,rest:75,grip:"db",mode:"flye",
+  {n:"Dumbbell Flyes",sets:"3 × 10–12",nsets:3,rest:75,kind:"iso",pri:3,grip:"db",mode:"flye",
    mus:["chest","fdelt"],
    desc:"Arms above chest, palms in — open wide, squeeze back.",
    cues:["Slight fixed bend in the elbows","Control the stretch at the bottom","Hug-a-tree arc, don't press"],
    poses:[{a:8},{a:80}]},
-  {n:"Pullovers",sets:"3 × 12",nsets:3,rest:75,grip:"ez",bench:"auto",
+  {n:"Pullovers",sets:"3 × 12",nsets:3,rest:75,kind:"iso",pri:5,grip:"ez",bench:"auto",
    mus:["chest","lats"],
    desc:"Arc the weight behind your head, pull back over the chest.",
    cues:["Deep stretch through chest & lats","Elbows soft, ribs down","Move only at the shoulders"],
@@ -270,25 +379,25 @@ const EX={
           {px:165,py:183,torso:-90,ua:262,fa:258,th:55,sh:-5,ft:60}]}
  ],
  Tue:[
-  {n:"Deadlift",sets:"3–4 × 6–10",nsets:4,rest:120,grip:"bar",
+  {n:"Deadlift",sets:"3–4 × 6–10",nsets:4,rest:120,kind:"compound",pri:1,ereps:"12–15",grip:"bar",
    mus:["lowback","glutes","hams","traps","forearms"],
    desc:"Feet hip-width, grip outside knees, drive through hips & legs.",
    cues:["Bar stays close to the body","Neutral spine — chest proud","Push the floor away, hips & chest rise together"],
    poses:[{px:140,py:190,torso:72,head:45,ua:-8,fa:-8,th:52,sh:-9,ft:70},
           {px:150,py:170,torso:4,ua:4,fa:4,th:1,sh:0}]},
-  {n:"Bent-Over Row",sets:"3 × 8–12",nsets:3,rest:90,grip:"ez",
+  {n:"Bent-Over Row",sets:"3 × 8–12",nsets:3,rest:90,kind:"compound",pri:2,grip:"ez",
    mus:["lats","traps","biceps","rdelt"],
    desc:"Hinge at the hips, flat back, pull the bar to your waist.",
    cues:["Squeeze the shoulder blades","Torso stays still — no heaving","Elbows drive back, not out"],
    poses:[{px:150,py:183,torso:68,head:40,ua:14,fa:14,th:22,sh:-12},
           {px:150,py:183,torso:68,head:40,ua:-35,fa:28,th:22,sh:-12}]},
-  {n:"One-Arm Row",sets:"3 × 10–12 / side",nsets:3,rest:75,grip:"db",prop:"benchR",
+  {n:"One-Arm Row",sets:"3 × 10–12 / side",nsets:3,rest:75,kind:"compound",pri:3,sreps:"6–8",grip:"db",prop:"benchR",
    mus:["lats","biceps","rdelt"],
    desc:"Support on the bench, pull the dumbbell toward your hip.",
    cues:["Don't twist the torso","Full stretch at the bottom","Lead with the elbow"],
    poses:[{px:158,py:183,torso:76,head:50,ua:18,fa:18,ua2:52,fa2:52,th:18,sh:-10,th2:30,sh2:-18},
           {px:158,py:183,torso:76,head:50,ua:-42,fa:16,ua2:52,fa2:52,th:18,sh:-10,th2:30,sh2:-18}]},
-  {n:"Pullovers (Lat Focus)",sets:"3 × 12",nsets:3,rest:75,grip:"ez",bench:"auto",
+  {n:"Pullovers (Lat Focus)",sets:"3 × 12",nsets:3,rest:75,kind:"iso",pri:4,grip:"ez",bench:"auto",
    mus:["lats","chest"],
    desc:"Same arc as chest day — now think about pulling with the lats.",
    cues:["Initiate from the lats","Keep hips down on the bench","Exhale as you pull over"],
@@ -296,22 +405,22 @@ const EX={
           {px:165,py:183,torso:-90,ua:262,fa:258,th:55,sh:-5,ft:60}]}
  ],
  Wed:[
-  {n:"Overhead Press",sets:"3 × 8–12",nsets:3,rest:90,grip:"db",
+  {n:"Overhead Press",sets:"3 × 8–12",nsets:3,rest:90,kind:"compound",pri:1,grip:"db",
    mus:["fdelt","sdelt","triceps"],
    desc:"Press the weight overhead, core braced.",
    cues:["Don't lean back — squeeze glutes","Finish with biceps by the ears","Lower under control to the shoulders"],
    poses:[{ua:58,fa:188},{ua:181,fa:180}]},
-  {n:"Lateral Raises",sets:"3 × 12–15",nsets:3,rest:60,grip:"db",mode:"front",
+  {n:"Lateral Raises",sets:"3 × 12–15",nsets:3,rest:60,kind:"iso",pri:2,grip:"db",mode:"front",
    mus:["sdelt"],
    desc:"Raise the arms out to shoulder height.",
    cues:["Slight bend in the elbows","No swinging — strict tempo","Lead with the elbows, not the hands"],
    poses:[{ua:7,fa:7},{ua:87,fa:82}]},
-  {n:"Upright Row",sets:"3 × 10–12",nsets:3,rest:75,grip:"ezfront",mode:"front",
+  {n:"Upright Row",sets:"3 × 10–12",nsets:3,rest:75,kind:"iso",pri:4,grip:"ezfront",mode:"front",
    mus:["sdelt","traps","biceps"],
    desc:"Pull the bar up your body to the upper chest, elbows high.",
    cues:["Don't pull above chin height","Bar stays close to the body","Elbows always above the wrists"],
    poses:[{ua:7,fa:-4},{ua:74,fa:-18}]},
-  {n:"Rear Delt Fly",sets:"3 × 12–15",nsets:3,rest:60,grip:"db",
+  {n:"Rear Delt Fly",sets:"3 × 12–15",nsets:3,rest:60,kind:"iso",pri:3,grip:"db",
    mus:["rdelt","traps"],
    desc:"Hinge forward, sweep the arms out and back.",
    cues:["Squeeze the rear delts at the top","Keep the back flat","Light weight, perfect control"],
@@ -319,60 +428,60 @@ const EX={
           {px:150,py:183,torso:70,head:42,ua:-118,fa:-112,th:20,sh:-12}]}
  ],
  Thu:[
-  {n:"EZ Bar Curl",sets:"3 × 10–12",nsets:3,rest:75,grip:"ez",
+  {n:"EZ Bar Curl",sets:"3 × 10–12",nsets:3,rest:75,kind:"iso",pri:1,grip:"ez",
    mus:["biceps","forearms"],
    desc:"Curl the bar to the shoulders, elbows pinned to your sides.",
    cues:["Elbows glued to the ribs","No swinging from the hips","Slow 2-second lowering"],
    poses:[{ua:6,fa:6},{ua:16,fa:152}]},
-  {n:"Hammer Curls",sets:"3 × 10–12",nsets:3,rest:60,grip:"db",
+  {n:"Hammer Curls",sets:"3 × 10–12",nsets:3,rest:60,kind:"iso",pri:3,grip:"db",
    mus:["biceps","forearms"],
    desc:"Neutral grip — curl the dumbbells like swinging a hammer.",
    cues:["Palms face each other throughout","Builds the brachialis & forearm","Squeeze at the top"],
    poses:[{ua:6,fa:6},{ua:16,fa:152}]},
-  {n:"Skullcrushers",sets:"3 × 10–12",nsets:3,rest:75,grip:"ez",bench:"auto",
+  {n:"Skullcrushers",sets:"3 × 10–12",nsets:3,rest:75,kind:"iso",pri:2,grip:"ez",bench:"auto",
    mus:["triceps"],
    desc:"Lower the bar to your forehead, extend back up.",
    cues:["Upper arms stay vertical & still","Elbows track in, not out","Only the forearms move"],
    poses:[{px:165,py:183,torso:-90,ua:186,fa:184,th:55,sh:-5,ft:60},
           {px:165,py:183,torso:-90,ua:186,fa:262,th:55,sh:-5,ft:60}]},
-  {n:"Concentration Curl",sets:"3 × 12 / side",nsets:3,rest:60,grip:"db",prop:"seat",
+  {n:"Concentration Curl",sets:"3 × 12 / side",nsets:3,rest:60,kind:"iso",pri:5,grip:"db",prop:"seat",
    mus:["biceps"],
    desc:"Elbow braced on the inner thigh, curl with full focus.",
    cues:["Elbow stays locked on the thigh","Peak squeeze at the top","No shoulder assist"],
    poses:[{px:150,py:206,torso:30,head:18,ua:10,fa:8,th:82,sh:-8,th2:70,sh2:-4,ft:60},
           {px:150,py:206,torso:30,head:18,ua:10,fa:142,th:82,sh:-8,th2:70,sh2:-4,ft:60}]},
-  {n:"Overhead Triceps Ext.",sets:"3 × 12",nsets:3,rest:60,grip:"db",
+  {n:"Overhead Triceps Ext.",sets:"3 × 12",nsets:3,rest:60,kind:"iso",pri:4,grip:"db",
    mus:["triceps"],
    desc:"Weight behind the head, extend the arms to lockout.",
    cues:["Elbows point to the ceiling","Full stretch behind the head","Keep the core braced"],
    poses:[{ua:184,fa:183},{ua:184,fa:266}]}
  ],
  Fri:[
-  {n:"Squats",sets:"3–4 × 8–12",nsets:4,rest:120,grip:"db",
+  {n:"Squats",sets:"3–4 × 8–12",nsets:4,rest:120,kind:"compound",pri:1,ereps:"12–15",grip:"db",
    mus:["quads","glutes","abs"],
    desc:"Chest up, hips back, knees tracking out.",
    cues:["Chest up, eyes forward","Hips back like sitting in a chair","Drive through the mid-foot"],
    poses:[{px:150,py:170,torso:4,ua:28,fa:196,th:1,sh:0},
           {px:132,py:208,torso:34,head:16,ua:44,fa:206,th:80,sh:-27}]},
-  {n:"Romanian Deadlift",sets:"3–4 × 8–12",nsets:4,rest:120,grip:"bar",
+  {n:"Romanian Deadlift",sets:"3–4 × 8–12",nsets:4,rest:120,kind:"compound",pri:2,ereps:"12–15",grip:"bar",
    mus:["hams","glutes","lowback"],
    desc:"Hinge at the hips, lower the bar to shin level.",
    cues:["Legs nearly straight — soft knees","Feel the hamstring stretch","Bar slides down the thighs"],
    poses:[{px:150,py:170,torso:4,ua:4,fa:4,th:1,sh:0},
           {px:138,py:172,torso:82,head:55,ua:2,fa:2,th:-10,sh:2}]},
-  {n:"Lunges",sets:"3 × 10 / leg",nsets:3,rest:90,grip:"db",
+  {n:"Lunges",sets:"3 × 10 / leg",nsets:3,rest:90,kind:"compound",pri:3,sreps:"6–8",grip:"db",
    mus:["quads","glutes","hams"],
    desc:"Step forward, lower both knees to 90°.",
    cues:["Front knee over the ankle","Torso stays tall","Push back through the front heel"],
    poses:[{px:150,py:170,torso:3,ua:2,fa:2,th:1,sh:0,th2:1,sh2:0},
           {px:150,py:204,torso:6,ua:6,fa:6,th:68,sh:-4,th2:-34,sh2:-92,ft2:-25}]},
-  {n:"Bulgarian Split Squat",sets:"3 × 8–10 / leg",nsets:3,rest:90,grip:"db",prop:"benchL",
+  {n:"Bulgarian Split Squat",sets:"3 × 8–10 / leg",nsets:3,rest:90,kind:"compound",pri:4,sreps:"6–8",grip:"db",prop:"benchL",
    mus:["quads","glutes"],
    desc:"Rear foot on the bench, squat down on the lead leg.",
    cues:["Weight through the front heel","Torso upright, core tight","Knee tracks over the toes"],
    poses:[{px:160,py:184,torso:8,ua:4,fa:4,th:22,sh:-8,th2:-38,sh2:-138,ft2:-60},
           {px:160,py:207,torso:14,ua:8,fa:8,th:72,sh:-24,th2:-42,sh2:-128,ft2:-55}]},
-  {n:"Calf Raises",sets:"3 × 15–20",nsets:3,rest:60,grip:"db",
+  {n:"Calf Raises",sets:"3 × 15–20",nsets:3,rest:60,kind:"iso",pri:5,ereps:"20–25",grip:"db",
    mus:["calves"],
    desc:"Rise onto the toes, full squeeze at the top.",
    cues:["Pause 1 s at the very top","Full stretch at the bottom","No bouncing"],
@@ -380,31 +489,31 @@ const EX={
           {px:150,py:160,torso:2,ua:2,fa:2,th:1,sh:0,ft:46}],dur:800}
  ],
  Sat:[
-  {n:"Plank Hold",sets:"3 × 30–60 s",nsets:3,rest:60,grip:"none",
+  {n:"Plank Hold",sets:"3 × 30–60 s",nsets:3,rest:60,kind:"timed",pri:1,grip:"none",
    mus:["abs","obliques"],
    desc:"Forearms down, body in one straight line.",
    cues:["Squeeze glutes & abs together","Don't let the hips sag or pike","Breathe steadily"],
    poses:[{px:150,py:221,torso:92,head:60,ua:24,fa:94,th:-79,sh:-79,ft:-28},
           {px:150,py:218,torso:92,head:60,ua:22,fa:94,th:-79,sh:-79,ft:-28}],dur:1500},
-  {n:"Russian Twists",sets:"3 × 15 / side",nsets:3,rest:45,grip:"db",
+  {n:"Russian Twists",sets:"3 × 15 / side",nsets:3,rest:45,kind:"iso",pri:2,grip:"db",
    mus:["obliques","abs"],
    desc:"Seated V-position, rotate the weight side to side.",
    cues:["Rotate from the torso, not the arms","Chest stays lifted","Slower = harder"],
    poses:[{px:150,py:230,torso:-42,head:-20,ua:98,fa:96,th:68,sh:142,ft:120},
           {px:150,py:230,torso:-34,head:-14,ua:76,fa:74,th:68,sh:142,ft:120}],dur:700},
-  {n:"Leg Raises",sets:"3 × 12–15",nsets:3,rest:45,grip:"none",
+  {n:"Leg Raises",sets:"3 × 12–15",nsets:3,rest:45,kind:"iso",pri:3,grip:"none",
    mus:["abs"],
    desc:"Lying flat — lift the legs to 90°, lower with control.",
    cues:["Press the lower back into the floor","Lower slowly — that's the work","Don't swing"],
    poses:[{px:150,py:249,torso:-90,ua:88,fa:88,th:91,sh:90,ft:170},
           {px:150,py:249,torso:-90,ua:88,fa:88,th:176,sh:176,ft:250}]},
-  {n:"Crunches",sets:"3 × 15–20",nsets:3,rest:45,grip:"none",
+  {n:"Crunches",sets:"3 × 15–20",nsets:3,rest:45,kind:"iso",pri:4,ereps:"20–25",grip:"none",
    mus:["abs"],
    desc:"Curl the shoulder blades off the floor, squeeze the abs.",
    cues:["Chin off the chest","Exhale hard at the top","Small range, big squeeze"],
    poses:[{px:150,py:249,torso:-88,head:-70,ua:96,fa:96,th:118,sh:14,ft:120},
           {px:150,py:249,torso:-56,head:-40,ua:92,fa:92,th:118,sh:14,ft:120}],dur:850},
-  {n:"Farmer's Walk",sets:"3 × 30–60 s",nsets:3,rest:90,grip:"db",
+  {n:"Farmer's Walk",sets:"3 × 30–60 s",nsets:3,rest:90,kind:"timed",pri:5,grip:"db",
    mus:["forearms","traps","abs"],
    desc:"Heavy dumbbells at your sides — walk tall.",
    cues:["Shoulders back and down","Crush-grip the handles","Short, quick, controlled steps"],
@@ -413,6 +522,40 @@ const EX={
  ],
  Sun:[]
 };
+
+/* ================= plan adaptation ================= */
+function dayList(dayKey){
+  const list=EX[dayKey];
+  if(P.time===30)return list.filter(e=>e.pri<=3);
+  return list;
+}
+function adSets(ex,idx){                 /* idx within the trimmed day list */
+  let n=ex.nsets;
+  if(P.time===60&&idx<2)n+=1;
+  return n;
+}
+function adReps(ex){
+  const after=ex.sets.split("×")[1].trim();      /* e.g. "8–12", "10 / leg", "30–60 s" */
+  if(ex.kind==="timed")return after;
+  const mm=after.match(/^(\d+(?:–\d+)?)(.*)$/);
+  const suffix=mm?mm[2]:"";
+  let range=mm?mm[1]:after;
+  if(P.goal==="s")range=ex.sreps||(ex.kind==="compound"?"4–6":"8–10");
+  if(P.goal==="e")range=ex.ereps||"15–20";
+  return range+suffix;
+}
+function adLabel(ex,idx){return adSets(ex,idx)+" × "+adReps(ex)}
+function adRest(ex){
+  const r=ex.rest*GOAL_META[P.goal].restX;
+  return Math.min(180,Math.max(30,Math.round(r/15)*15));
+}
+function adRPE(ex){
+  if(ex.kind==="timed")return "Perfect form the whole time — stop when it breaks";
+  return GOAL_META[P.goal].rpe;
+}
+function restLabel(s){return s>=120?Math.floor(s/60)+":"+String(s%60).padStart(2,"0")+" min":s+" s"}
+function wKey(ex){return "wc-w-"+ex.n}
+function savedW(ex){const v=ls.get(wKey(ex));return v?parseFloat(v):null}
 
 /* ================= animation engine ================= */
 const NS="http://www.w3.org/2000/svg";
@@ -551,7 +694,6 @@ function animate(svg,ex,accent){
 }
 
 /* ================= muscle map ================= */
-/* shapes in local coords, mirrored ±x. e=[cx,cy,rx,ry] */
 const MUS={
  chest:{fig:"f",e:[[7,30,6.5,4.5]]},
  fdelt:{fig:"f",e:[[14.5,24,4.2,4.2]]},
@@ -610,13 +752,20 @@ DAYS.forEach(d=>{
   b.onclick=()=>{activeDay=d.d;render()};daysNav.appendChild(b);
 });
 
+function renderProfileChip(){
+  const gm=GOAL_META[P.goal];
+  document.getElementById("profile-chip").innerHTML=
+    `${gm.emoji} ${gm.label} &nbsp;·&nbsp; ⏱ ${P.time} min`;
+}
+
 function render(){
-  const day=DAYS.find(x=>x.d===activeDay), list=EX[activeDay];
+  renderProfileChip();
+  const day=DAYS.find(x=>x.d===activeDay), list=dayList(activeDay);
   DAYS.forEach(d=>{const p=document.getElementById("pill-"+d.d);
     p.classList.toggle("active",d.d===activeDay);
     p.style.background=d.d===activeDay?d.g:"";});
   let html=`<div class="day-head"><h2>${day.d==="Sun"?"Sunday":day.name} ${day.d==="Sun"?"":"Day"}</h2>
-    <span class="count">${list.length?list.length+" exercises":"recovery"}</span></div>
+    <span class="count">${list.length?list.length+" exercises · ~"+P.time+" min":"recovery"}</span></div>
     <div class="day-bar" style="background:${day.g}"></div>`;
   if(!list.length){
     html+=`<div class="rest-card"><div class="emoji">🌿</div><h3>Rest &amp; Recover</h3>
@@ -629,7 +778,7 @@ function render(){
       html+=`<div class="card" data-i="${i}">
         <div class="num" style="background:${day.g}">${i+1}</div>
         <div class="info"><div class="name">${ex.n}</div>
-          <div class="meta" style="color:${day.color}">${ex.sets}</div>
+          <div class="meta" style="color:${day.color}">${adLabel(ex,i)} · rest ${restLabel(adRest(ex))}</div>
           <div class="desc">${ex.desc}</div></div>
         <div class="play" style="border-color:${day.color}55">
           <svg viewBox="0 0 10 12" fill="${day.color}"><path d="M0 0 L10 6 L0 12 Z"/></svg></div>
@@ -643,14 +792,38 @@ function render(){
 }
 
 /* ================= demo modal ================= */
+function weightRowHTML(ex,idPrefix){
+  if(!weightsOn||ex.grip==="none")return "";
+  const v=savedW(ex);
+  return `<div class="wrow">
+    <label>My working weight<br><span style="font-size:10.5px;opacity:.75">stored only on this phone</span></label>
+    <input type="number" inputmode="decimal" step="0.5" min="0" id="${idPrefix}-w"
+      value="${v??""}" placeholder="—"><span class="kg">kg</span></div>
+  ${v?`<div class="wnudge">💡 Hit the top of the rep range at ${v} kg with good form? Try ${(v+2.5).toFixed(1).replace(".0","")} kg next session.</div>`:""}`;
+}
+function bindWeightInput(ex,idPrefix){
+  const inp=document.getElementById(idPrefix+"-w");
+  if(!inp)return;
+  inp.onchange=()=>{
+    const v=parseFloat(inp.value);
+    if(v>0)ls.set(wKey(ex),String(v));else ls.del(wKey(ex));
+  };
+}
+
 function openSheet(i){
-  const day=DAYS.find(x=>x.d===activeDay), ex=EX[activeDay][i];
+  const day=DAYS.find(x=>x.d===activeDay), ex=dayList(activeDay)[i];
   document.getElementById("m-tag").textContent=day.name+" · Exercise "+(i+1);
   document.getElementById("m-tag").style.background=day.g;
   document.getElementById("m-name").textContent=ex.n;
-  document.getElementById("m-reps").textContent=ex.sets+" · "+ex.desc;
+  document.getElementById("m-reps").textContent=ex.desc;
+  document.getElementById("m-rx").innerHTML=`
+    <div class="pill"><b>Sets × Reps</b>${adLabel(ex,i)}</div>
+    <div class="pill"><b>Rest</b>${restLabel(adRest(ex))}</div>
+    <div class="pill" style="flex:1 1 100%"><b>Intensity</b>${adRPE(ex)}${ex.kind!=="timed"?" · "+GOAL_META[P.goal].tempo:""}</div>`;
   document.getElementById("m-cues").innerHTML=ex.cues.map(c=>`<li>${c}</li>`).join("");
   document.getElementById("m-close").style.background=day.g;
+  document.getElementById("m-weight").innerHTML=weightRowHTML(ex,"m");
+  bindWeightInput(ex,"m");
   const body=document.getElementById("m-body");body.innerHTML="";
   body.appendChild(buildMuscleSVG(ex.mus||[],day.color));
   document.getElementById("m-chips").innerHTML=(ex.mus||[]).map(k=>
@@ -667,6 +840,51 @@ function closeSheet(){overlay.classList.remove("open");sheet.classList.remove("o
 overlay.onclick=closeSheet;
 document.getElementById("m-close").onclick=closeSheet;
 
+/* ================= setup / settings ================= */
+const setup=document.getElementById("setup");
+let selGoal=P.goal, selTime=P.time, selWeights=weightsOn;
+
+function paintSetup(){
+  document.querySelectorAll("#opt-goal .opt").forEach(b=>
+    b.classList.toggle("sel",b.dataset.v===selGoal));
+  document.querySelectorAll("#opt-time .opt").forEach(b=>
+    b.classList.toggle("sel",+b.dataset.v===selTime));
+  document.getElementById("sw-weights").classList.toggle("on",selWeights);
+  const hasW=ls.keys().some(k=>k.startsWith("wc-w-"));
+  document.getElementById("erase-w").style.display=hasW?"block":"none";
+}
+function openSetup(firstRun){
+  selGoal=P.goal;selTime=P.time;selWeights=weightsOn;
+  document.getElementById("setup-title").textContent=firstRun?"Make it yours":"Settings";
+  document.getElementById("setup-skip").style.display=firstRun?"block":"none";
+  paintSetup();
+  setup.classList.add("open");document.body.style.overflow="hidden";
+}
+function closeSetup(){setup.classList.remove("open");document.body.style.overflow=""}
+
+document.querySelectorAll("#opt-goal .opt").forEach(b=>
+  b.onclick=()=>{selGoal=b.dataset.v;paintSetup()});
+document.querySelectorAll("#opt-time .opt").forEach(b=>
+  b.onclick=()=>{selTime=+b.dataset.v;paintSetup()});
+document.getElementById("sw-weights").onclick=()=>{selWeights=!selWeights;paintSetup()};
+document.getElementById("erase-w").onclick=()=>{
+  ls.keys().filter(k=>k.startsWith("wc-w-")).forEach(k=>ls.del(k));
+  paintSetup();
+};
+document.getElementById("setup-save").onclick=()=>{
+  P={goal:selGoal,time:selTime};
+  ls.set("wc-profile",JSON.stringify(P));
+  weightsOn=selWeights;
+  if(weightsOn)ls.set("wc-weights","1");else ls.del("wc-weights");
+  closeSetup();render();
+};
+document.getElementById("setup-skip").onclick=()=>{
+  ls.set("wc-profile",JSON.stringify(P));  /* remember the default so setup won't reappear */
+  closeSetup();render();
+};
+document.getElementById("gear").onclick=()=>openSetup(false);
+document.getElementById("profile-chip").onclick=()=>openSetup(false);
+
 /* ================= workout mode ================= */
 const wo=document.getElementById("wo"), woInner=document.getElementById("wo-inner");
 let W=null, restTimer=null, wakeLock=null;
@@ -680,8 +898,9 @@ document.addEventListener("visibilitychange",()=>{
 
 function startWorkout(){
   const day=DAYS.find(x=>x.d===activeDay);
-  if(!EX[activeDay].length)return;
-  W={day,list:EX[activeDay],exi:0,seti:1,phase:"exercise"};
+  const list=dayList(activeDay);
+  if(!list.length)return;
+  W={day,list,exi:0,seti:1,phase:"exercise"};
   wo.classList.add("open");document.body.style.overflow="hidden";
   grabWakeLock();
   woRender();
@@ -708,12 +927,14 @@ function woRender(){
   const ex=W.list[W.exi];
   wo.classList.remove("go");wo.style.background="";
   if(W.phase==="exercise"){
+    const w=savedW(ex);
     woInner.innerHTML=woTop()+`
       <h2>${ex.n}</h2>
-      <div class="wo-set" style="color:${W.day.color}">Set ${W.seti} of ${ex.nsets} · ${ex.sets}</div>
+      <div class="wo-set" style="color:${W.day.color}">Set ${W.seti} of ${adSets(ex,W.exi)} · ${adReps(ex)} reps</div>
       <div class="stage"><span class="live">Demo</span>
         <svg id="wo-svg" viewBox="0 26 320 250" xmlns="${NS}"></svg></div>
-      <div class="wo-cue">✓ ${ex.cues[0]} &nbsp;·&nbsp; ${ex.cues[1]||""}</div>
+      <div class="wo-cue">⚡ ${adRPE(ex)}${ex.kind!=="timed"?" · "+GOAL_META[P.goal].tempo:""}<br>✓ ${ex.cues[0]}</div>
+      ${weightsOn&&w?`<div class="wo-weight">🏋️ Your weight: ${w} kg</div>`:""}
       <div class="wo-actions">
         <button class="wo-btn" id="wo-done" style="background:${W.day.g}">Set ${W.seti} done ✓</button>
         <div class="wo-sub">
@@ -758,12 +979,12 @@ function woRender(){
     try{navigator.vibrate?.([260,120,260])}catch(e){}
   }
   else if(W.phase==="done"){
-    const sets=W.list.reduce((a,e)=>a+e.nsets,0);
+    const sets=W.list.reduce((a,e,i)=>a+adSets(e,i),0);
     woInner.innerHTML=`
       <div class="done-wrap">
         <div class="emoji">🎉</div>
         <h2>${W.day.name} day complete</h2>
-        <p>${W.list.length} exercises · ${sets} sets. Nothing was logged, nothing interrupted your music. Stretch it out and go eat.</p>
+        <p>${W.list.length} exercises · ${sets} sets · ${GOAL_META[P.goal].label} focus. Nothing was logged, nothing interrupted your music. Stretch it out and go eat.</p>
         <div class="wo-actions" style="width:100%;max-width:320px">
           <button class="wo-btn" id="wo-finish" style="background:${W.day.g}">Finish</button>
         </div>
@@ -777,15 +998,15 @@ function woRender(){
 
 function nextLabel(){
   const ex=W.list[W.exi];
-  if(W.seti<ex.nsets)return `Set ${W.seti+1} of ${ex.nsets} · ${ex.n}`;
+  if(W.seti<adSets(ex,W.exi))return `Set ${W.seti+1} of ${adSets(ex,W.exi)} · ${ex.n}`;
   if(W.exi<W.list.length-1)return `${W.list[W.exi+1].n} · Set 1`;
   return "Finish";
 }
 function setDone(){
   const ex=W.list[W.exi];
   cancelAnimationFrame(rafId);
-  if(W.seti>=ex.nsets && W.exi>=W.list.length-1){W.phase="done";woRender();return}
-  W.phase="rest";W.restEnd=Date.now()+ex.rest*1000;woRender();
+  if(W.seti>=adSets(ex,W.exi) && W.exi>=W.list.length-1){W.phase="done";woRender();return}
+  W.phase="rest";W.restEnd=Date.now()+adRest(ex)*1000;woRender();
 }
 function skipExercise(){
   cancelAnimationFrame(rafId);
@@ -800,7 +1021,7 @@ function tickRest(){
   if(!num){clearInterval(restTimer);return}
   num.textContent=secs;
   const ex=W.list[W.exi];
-  const frac=Math.min(1,left/(ex.rest*1000));
+  const frac=Math.min(1,left/(adRest(ex)*1000));
   fg.setAttribute("stroke-dashoffset",641*(1-frac));
   const warn=secs<=15;
   num.style.color=warn?"#ffb648":"var(--text)";
@@ -810,12 +1031,14 @@ function tickRest(){
 function enterGo(){clearInterval(restTimer);W.phase="go";woRender()}
 function advance(){
   const ex=W.list[W.exi];
-  if(W.seti<ex.nsets)W.seti++;
+  if(W.seti<adSets(ex,W.exi))W.seti++;
   else{W.exi++;W.seti=1}
   W.phase="exercise";woRender();
 }
 
+/* ================= boot ================= */
 render();
+if(!ls.get("wc-profile"))openSetup(true);
 </script>
 </body>
 </html>
