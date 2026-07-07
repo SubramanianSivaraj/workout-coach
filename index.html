@@ -107,6 +107,8 @@
     border:1px solid var(--line);color:var(--muted);font-size:11px;font-weight:800;
     letter-spacing:.08em;padding:6px 13px;border-radius:999px;cursor:pointer;font-family:inherit}
   .t3-toggle.on{color:#0b0d12;border-color:transparent}
+  .t3-label{position:absolute;top:12px;right:14px;z-index:2;font-size:12px;
+    font-weight:800;letter-spacing:.14em;pointer-events:none}
   .stage canvas{display:block;width:100%;height:auto;touch-action:none}
   .wrow{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;
     padding:12px 14px;display:flex;align-items:center;gap:10px}
@@ -1114,7 +1116,7 @@ function startWorkout(){
   woRender();
 }
 function endWorkout(){
-  W=null;clearInterval(restTimer);cancelAnimationFrame(rafId);
+  W=null;clearInterval(restTimer);cancelAnimationFrame(rafId);hide3D();
   wakeLock?.release().catch(()=>{});wakeLock=null;
   wo.classList.remove("open","go");wo.style.background="";
   document.body.style.overflow="";
@@ -1133,6 +1135,7 @@ function woTop(){
 
 function woRender(){
   const ex=W.list[W.exi];
+  hide3D();
   wo.classList.remove("go");wo.style.background="";
   if(W.phase==="exercise"){
     const w=savedW(ex);
@@ -1149,7 +1152,10 @@ function woRender(){
           <button id="wo-skip">Skip exercise</button>
         </div>
       </div>`;
-    animate(document.getElementById("wo-svg"),ex,W.day.color);
+    if(can3D(ex)&&ls.get("wc-3d")==="1"){
+      document.getElementById("wo-svg").style.display="none";
+      show3D(ex,W.day,woInner.querySelector(".stage"));
+    }else animate(document.getElementById("wo-svg"),ex,W.day.color);
     document.getElementById("wo-done").onclick=setDone;
     document.getElementById("wo-skip").onclick=skipExercise;
   }
@@ -1309,6 +1315,7 @@ function buildRig(accent){
   head.position.y=(9+10.5)*S;neckG.add(head);
   /* limbs: +z = near side (pose base fields), -z = far side (*2 fields) */
   const sides={};
+  const meshes={torso:torsoG.children[0],hips,ua:[],fa:[],th:[],sh:[]};
   for(const s of[-1,1]){
     const m=s>0?near:farM;
     const shG=bone(34*S,5.5*S,m,false);shG.position.set(0,55*S,s*13*S);torsoG.add(shG);
@@ -1318,6 +1325,8 @@ function buildRig(accent){
     const knG=bone(42*S,5.5*S,m,false);knG.position.y=-46*S;hipG.add(knG);
     const ftG=bone(16*S,4.5*S,m,false);ftG.position.y=-42*S;knG.add(ftG);
     sides[s]={shG,elG,hand,hipG,knG,ftG};
+    meshes.ua.push(shG.children[0]);meshes.fa.push(elG.children[0]);
+    meshes.th.push(hipG.children[0]);meshes.sh.push(knG.children[0]);
   }
   const r=d=>d*Math.PI/180;
   function apply(p){
@@ -1339,12 +1348,24 @@ function buildRig(accent){
       q.ftG.rotation.z=r(ft-sh);
     }
   }
-  return{group:grp,apply,sides};
+  return{group:grp,apply,sides,meshes};
 }
-function show3D(ex,day){
+/* which rig meshes glow for a given primary muscle */
+const MUS3={chest:"torso",traps:"torso",lats:"torso",lowback:"torso",abs:"torso",
+  obliques:"torso",fdelt:"ua",sdelt:"ua",rdelt:"ua",biceps:"ua",triceps:"ua",
+  forearms:"fa",quads:"th",hams:"th",glutes:"hips",calves:"sh"};
+function pickGlow(rig,ex){
+  const part=MUS3[(ex.mus||[])[0]];
+  if(!part)return[];
+  const t=rig.meshes[part];
+  const arr=Array.isArray(t)?t:[t];
+  arr.forEach(m=>m.material=m.material.clone());  /* un-share before pulsing */
+  return arr;
+}
+function show3D(ex,day,stageEl){
   hide3D();
   const THREE=window.THREE;
-  const stage=sheet.querySelector(".stage");
+  const stage=stageEl||sheet.querySelector(".stage");
   const w=stage.clientWidth||340, h=Math.round(w*250/320);
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
   renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
@@ -1427,6 +1448,42 @@ function show3D(ex,day){
     if(ex.prop==="benchL")box(42,114,206,216);
     if(ex.prop==="seat")box(104,170,214,224);
   }
+  /* working-muscle glow targets (cloned materials, pulsed in the loop) */
+  const glowMeshes=pickGlow(rig,ex);
+  const glowCol=new THREE.Color(day.color);
+  glowMeshes.forEach(m=>m.material.emissive=glowCol.clone());
+  /* movement trace: near hand (or ankle when no grip) sampled over the rep */
+  {
+    const point=ex.grip==="none"?rig.sides[1].ftG:rig.sides[1].hand;
+    const pts=[];const v=new THREE.Vector3();
+    for(let i=0;i<=20;i++){
+      rig.apply(lerpPose(poses[0],poses[1],i/20));
+      rig.group.updateMatrixWorld(true);
+      point.getWorldPosition(v);pts.push(v.clone());
+    }
+    rig.apply(poses[0]);
+    let plen=0;for(let i=1;i<pts.length;i++)plen+=pts[i].distanceTo(pts[i-1]);
+    if(plen>.56){ /* same 28-px rule as 2D, in world units */
+      const line=new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineDashedMaterial({color:0xffffff,transparent:true,opacity:.38,
+          dashSize:.06,gapSize:.09}));
+      line.computeLineDistances();scene.add(line);
+      const dirV=pts[20].clone().sub(pts[19]).normalize();
+      const cone=new THREE.Mesh(new THREE.ConeGeometry(.05,.13,10),
+        new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.55}));
+      cone.position.copy(pts[20]).addScaledVector(dirV,.07);
+      cone.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dirV);
+      scene.add(cone);
+    }
+  }
+  /* phase label overlay */
+  const lab=document.createElement("div");lab.className="t3-label";
+  stage.appendChild(lab);
+  let lastSi=-1;
+  const ph0=PH[ex.n];
+  if(ph0){lab.textContent=ph0[0];
+    lab.style.color=ph0[0].includes("↓")?"#8b93a7":day.color;lastSi=0}
   const cam=new THREE.PerspectiveCamera(38,w/h,.1,50);
   const st={renderer,scene,cam,az:-.55,pol:1.22,dist:6.4,ty:1.75,user:false,raf:0,
             canvas:renderer.domElement,ptrs:new Map(),pd:0};
@@ -1450,10 +1507,17 @@ function show3D(ex,day){
   cv.addEventListener("wheel",e=>{e.preventDefault();st.user=true;
     st.dist=Math.min(11,Math.max(3.2,st.dist*(1+e.deltaY*.001)))},{passive:false});
   function loop(){
-    const t=(performance.now()-t0)%total;
+    const now=performance.now();
+    const t=(now-t0)%total;
     const si=Math.min(Math.floor(t/(dur+hold)),segs.length-1);
     const f=Math.min((t-si*(dur+hold))/dur,1);
     rig.apply(lerpPose(segs[si][0],segs[si][1],ease(f)));
+    const pulse=.28+.18*Math.sin(now/350);
+    glowMeshes.forEach(m=>m.material.emissiveIntensity=pulse);
+    if(si!==lastSi){lastSi=si;
+      const ph=PH[ex.n];
+      if(ph){const txt=ph[si%2];lab.textContent=txt;
+        lab.style.color=txt.includes("↓")?"#8b93a7":day.color}}
     if(!st.user)st.az+=.0035;
     cam.position.set(st.dist*Math.sin(st.pol)*Math.sin(st.az),
                      st.ty+st.dist*Math.cos(st.pol),
@@ -1462,6 +1526,7 @@ function show3D(ex,day){
     renderer.render(scene,cam);
     st.raf=requestAnimationFrame(loop);
   }
+  st.loop=loop;st.label=lab;
   st.raf=requestAnimationFrame(loop);
   T3=st;
 }
@@ -1472,8 +1537,15 @@ function hide3D(){
     if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose())}});
   T3.renderer.dispose();
   T3.canvas.remove();
+  T3.label?.remove();
   T3=null;
 }
+/* pause the 3D loop while the page is hidden (battery) */
+document.addEventListener("visibilitychange",()=>{
+  if(!T3)return;
+  if(document.visibilityState==="hidden")cancelAnimationFrame(T3.raf);
+  else T3.raf=requestAnimationFrame(T3.loop);
+});
 
 /* ================= boot ================= */
 render();

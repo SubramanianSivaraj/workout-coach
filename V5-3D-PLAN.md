@@ -81,16 +81,20 @@ or serve the repo folder directly.
       level) — all cosmetic, none blocking
 - [x] Commit: "v5 s3: all exercises in 3D with equipment"
 
-### Session 4 — Sun PM: parity polish + integration
-- [ ] Working-muscle glow: emissive pulse on the relevant body mesh (map from
-      ex.mus[0], reuse glowPt intent)
-- [ ] Movement trace in 3D: line/tube along wrist path + arrow cone (skip when
-      short, same 28px rule)
-- [ ] Phase labels as HTML overlay on the 3D stage (reuse PH table)
-- [ ] Workout mode: 3D stage honored there too when toggle is on
-- [ ] Mobile perf pass: pause rendering when modal closed/page hidden, cap
-      device pixel ratio, dispose scene on close
-- [ ] Commit: "v5 s4: glow, traces, labels, workout mode, perf"
+### Session 4 — Sun PM: parity polish + integration ✅ DONE
+- [x] Working-muscle glow: MUS3 map (ex.mus[0] → torso/hips/ua/fa/th/sh rig
+      meshes), materials cloned per-target (un-shared), emissive pulse in loop
+- [x] Movement trace: near hand (ankle when grip none) sampled ×21 via
+      getWorldPosition, dashed THREE.Line + arrow cone, skipped under .56
+      world units (= the 2D 28-px rule)
+- [x] Phase labels: .t3-label HTML overlay on the stage, PH table + si%2,
+      accent ↑ / muted ↓, set immediately at mount and on segment change
+- [x] Workout mode honors 3D pref: show3D(stage) parametrized, wo exercise
+      phase mounts 3D; verified dispose on rest phase, remount on next set,
+      dispose on end
+- [x] Perf: visibilitychange pauses/resumes the 3D loop; DPR cap and full
+      dispose (geo+materials+renderer) already in place, re-verified
+- [x] Commit: "v5 s4: glow, traces, labels, workout mode, perf"
 
 ### Session 5 — Sun eve: QA + DEPLOY
 - [ ] Full pass: every exercise × 2D/3D toggle × modal + workout mode; fresh
@@ -128,3 +132,10 @@ or serve the repo folder directly.
   mode → woRender exercise phase needs the same toggle/canvas plumbing as the
   modal (share applyStageMode-like helper); perf → pause loop on
   visibilitychange, cap DPR already done, dispose verified.
+- 2026-07-07 (s4): Session 4 complete. Glow/trace/labels/wo-mode/perf all in;
+  28-exercise regression sweep passed (mount+dispose per exercise), workout
+  mode lifecycle verified (mount→rest dispose→remount→end dispose), console
+  clean. Ready for s5: QA sweep both 2D/3D, payload audit, footer v5, sync
+  project files + archive v4, MERGE TO MAIN (the only deploy step), memory +
+  release note. s3 cosmetic notes stand (row far hand, twist db overlap,
+  raise db orientation) — fix in s5 only if trivial, else ship and note.
