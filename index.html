@@ -103,6 +103,13 @@
   .stage .live::before{content:"";width:7px;height:7px;border-radius:50%;background:#34d399;
     animation:pulse 1.4s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .t3-toggle{position:absolute;bottom:10px;right:12px;z-index:2;background:#12151e;
+    border:1px solid var(--line);color:var(--muted);font-size:11px;font-weight:800;
+    letter-spacing:.08em;padding:6px 13px;border-radius:999px;cursor:pointer;font-family:inherit}
+  .t3-toggle.on{color:#0b0d12;border-color:transparent}
+  .t3-label{position:absolute;top:12px;right:14px;z-index:2;font-size:12px;
+    font-weight:800;letter-spacing:.14em;pointer-events:none}
+  .stage canvas{display:block;width:100%;height:auto;touch-action:none}
   .wrow{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;
     padding:12px 14px;display:flex;align-items:center;gap:10px}
   .wrow label{font-size:12.5px;color:var(--muted);flex:1;line-height:1.4}
@@ -248,7 +255,7 @@
       <li><b>Form first:</b> technique always beats heavier weight.</li>
     </ul>
   </section>
-  <footer>Workout Coach v4 · self-contained · works offline · your settings never leave this device</footer>
+  <footer>Workout Coach v5 · 3D + 2D demos · works offline · your settings never leave this device</footer>
 </div>
 
 <div class="overlay" id="overlay"></div>
@@ -261,6 +268,7 @@
     <div class="rx" id="m-rx"></div>
     <div class="stage">
       <span class="live">Demo</span>
+      <button class="t3-toggle" id="t3-toggle" style="display:none">3D</button>
       <svg id="stage-svg" viewBox="0 26 320 250" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
     <div id="m-weight"></div>
@@ -1034,10 +1042,11 @@ function openSheet(i){
   st.textContent=`.cues li::before{color:${day.color}}`;
   overlay.classList.add("open");sheet.classList.add("open");
   document.body.style.overflow="hidden";
-  animate(document.getElementById("stage-svg"),ex,day.color);
+  SHEET={ex,day};
+  applyStageMode();
 }
 function closeSheet(){overlay.classList.remove("open");sheet.classList.remove("open");
-  document.body.style.overflow="";cancelAnimationFrame(rafId)}
+  document.body.style.overflow="";cancelAnimationFrame(rafId);hide3D();SHEET=null}
 overlay.onclick=closeSheet;
 document.getElementById("m-close").onclick=closeSheet;
 
@@ -1107,7 +1116,7 @@ function startWorkout(){
   woRender();
 }
 function endWorkout(){
-  W=null;clearInterval(restTimer);cancelAnimationFrame(rafId);
+  W=null;clearInterval(restTimer);cancelAnimationFrame(rafId);hide3D();
   wakeLock?.release().catch(()=>{});wakeLock=null;
   wo.classList.remove("open","go");wo.style.background="";
   document.body.style.overflow="";
@@ -1126,6 +1135,7 @@ function woTop(){
 
 function woRender(){
   const ex=W.list[W.exi];
+  hide3D();
   wo.classList.remove("go");wo.style.background="";
   if(W.phase==="exercise"){
     const w=savedW(ex);
@@ -1142,7 +1152,10 @@ function woRender(){
           <button id="wo-skip">Skip exercise</button>
         </div>
       </div>`;
-    animate(document.getElementById("wo-svg"),ex,W.day.color);
+    if(can3D(ex)&&ls.get("wc-3d")==="1"){
+      document.getElementById("wo-svg").style.display="none";
+      show3D(ex,W.day,woInner.querySelector(".stage"));
+    }else animate(document.getElementById("wo-svg"),ex,W.day.color);
     document.getElementById("wo-done").onclick=setDone;
     document.getElementById("wo-skip").onclick=skipExercise;
   }
@@ -1237,9 +1250,313 @@ function advance(){
   W.phase="exercise";woRender();
 }
 
+/* ================= 3D demos (v5, progressive enhancement) ================= */
+/* three.js loads as a module (see bridge script below); if it or WebGL is
+   unavailable the SVG demos simply remain — nothing else changes. */
+let SHEET=null, T3=null;
+window.addEventListener("three-ready",()=>{if(SHEET)applyStageMode()});
+function webglOK(){try{const c=document.createElement("canvas");
+  return !!(c.getContext("webgl2")||c.getContext("webgl"))}catch(e){return false}}
+/* session 3: every exercise is 3D-capable */
+function can3D(ex){
+  return !!window.THREE&&webglOK();
+}
+/* Adapt any exercise pose to the 3D rig's side-view convention.
+   front mode (2D): ua/fa are frontal-plane abduction angles → standing body,
+   arms driven by abd/fabd. flye mode: `a` is the opening angle → lying body,
+   arms vertical with abd. Russian twists get a real torso twist about Y. */
+function pose3(ex,p){
+  if(ex.mode==="front")return{...S,torso:2,th:1,sh:0,ua:6,fa:6,abd:p.ua,fabd:p.fa};
+  if(ex.mode==="flye")return{...S,px:165,py:183,torso:-90,th:55,sh:-5,ft:60,
+    ua:184,fa:184,abd:p.a,fabd:p.a+14};
+  const m={...S,...p};
+  if(ex.n==="Russian Twists")m.twist=(p===ex.poses[0]?22:-22);
+  return m;
+}
+function applyStageMode(){
+  if(!SHEET)return;
+  const {ex,day}=SHEET;
+  const svg=document.getElementById("stage-svg"), tb=document.getElementById("t3-toggle");
+  const ok=can3D(ex);
+  tb.style.display=ok?"block":"none";
+  const on=ok&&ls.get("wc-3d")==="1";
+  tb.classList.toggle("on",on);
+  tb.style.background=on?day.g:"";
+  if(on){cancelAnimationFrame(rafId);svg.style.display="none";show3D(ex,day)}
+  else{hide3D();svg.style.display="";animate(svg,ex,day.color)}
+}
+document.getElementById("t3-toggle").onclick=()=>{
+  if(ls.get("wc-3d")==="1")ls.del("wc-3d");else ls.set("wc-3d","1");
+  applyStageMode();
+};
+/* Jointed rig. 2D pose convention → 3D: screen x → +X, screen y-down → -Y.
+   dirDown(a)=(sin a,cos a) screen ⇒ world (sin a,-cos a): bone resting along -Y
+   needs rotation.z=+a. dirUp(a) ⇒ bone resting along +Y needs rotation.z=-a.
+   Arm/leg pose angles are absolute, so children subtract their parent's angle. */
+function buildRig(accent){
+  const THREE=window.THREE, S=1/50;
+  const skin=new THREE.MeshStandardMaterial({color:0xe8ecf7,roughness:.55,metalness:.05});
+  const near=new THREE.MeshStandardMaterial({color:new THREE.Color(accent),roughness:.5,metalness:.05});
+  const farM=near.clone();farM.color=near.color.clone().multiplyScalar(.55);
+  const grp=new THREE.Group();
+  const mesh=(geo,m)=>{const x=new THREE.Mesh(geo,m);x.castShadow=true;return x};
+  const bone=(len,rad,m,up)=>{const g=new THREE.Group();
+    const c=mesh(new THREE.CapsuleGeometry(rad,len,6,14),m);
+    c.position.y=(up?1:-1)*len/2;g.add(c);return g};
+  /* pelvis */
+  const hips=mesh(new THREE.CapsuleGeometry(7*S,16*S,6,14),skin);
+  hips.rotation.x=Math.PI/2;grp.add(hips);
+  /* torso chain */
+  const torsoG=bone(55*S,9.5*S,skin,true);grp.add(torsoG);
+  const shoBar=mesh(new THREE.CapsuleGeometry(6.5*S,26*S,6,14),skin);
+  shoBar.rotation.x=Math.PI/2;shoBar.position.y=55*S;torsoG.add(shoBar);
+  const neckG=bone(9*S,4*S,skin,true);neckG.position.y=55*S;torsoG.add(neckG);
+  const head=mesh(new THREE.SphereGeometry(10.5*S,20,16),skin);
+  head.position.y=(9+10.5)*S;neckG.add(head);
+  /* limbs: +z = near side (pose base fields), -z = far side (*2 fields) */
+  const sides={};
+  const meshes={torso:torsoG.children[0],hips,ua:[],fa:[],th:[],sh:[]};
+  for(const s of[-1,1]){
+    const m=s>0?near:farM;
+    const shG=bone(34*S,5.5*S,m,false);shG.position.set(0,55*S,s*13*S);torsoG.add(shG);
+    const elG=bone(30*S,4.6*S,m,false);elG.position.y=-34*S;shG.add(elG);
+    const hand=new THREE.Group();hand.position.y=-30*S;elG.add(hand);
+    const hipG=bone(46*S,7*S,m,false);hipG.position.set(0,0,s*8*S);grp.add(hipG);
+    const knG=bone(42*S,5.5*S,m,false);knG.position.y=-46*S;hipG.add(knG);
+    const ftG=bone(16*S,4.5*S,m,false);ftG.position.y=-42*S;knG.add(ftG);
+    sides[s]={shG,elG,hand,hipG,knG,ftG};
+    meshes.ua.push(shG.children[0]);meshes.fa.push(elG.children[0]);
+    meshes.th.push(hipG.children[0]);meshes.sh.push(knG.children[0]);
+  }
+  const r=d=>d*Math.PI/180;
+  function apply(p){
+    grp.position.set((p.px-150)*S,(FLOOR-p.py)*S,0);
+    torsoG.rotation.z=-r(p.torso);
+    torsoG.rotation.y=r(p.twist||0);
+    neckG.rotation.z=-r((p.head??p.torso)-p.torso);
+    for(const s of[-1,1]){
+      const q=sides[s], far=s<0;
+      const ua=far?(p.ua2??p.ua):p.ua, fa=far?(p.fa2??p.fa):p.fa,
+            th=far?(p.th2??p.th):p.th, sh=far?(p.sh2??p.sh):p.sh,
+            ft=far?(p.ft2??p.ft):p.ft;
+      q.shG.rotation.z=r(ua+p.torso);   /* parent torsoG carries -torso */
+      q.shG.rotation.x=-s*r(p.abd||0);  /* frontal-plane abduction */
+      q.elG.rotation.z=r(fa-ua);
+      q.elG.rotation.x=-s*r((p.fabd||0)-(p.abd||0));
+      q.hipG.rotation.z=r(th);
+      q.knG.rotation.z=r(sh-th);
+      q.ftG.rotation.z=r(ft-sh);
+    }
+  }
+  return{group:grp,apply,sides,meshes};
+}
+/* which rig meshes glow for a given primary muscle */
+const MUS3={chest:"torso",traps:"torso",lats:"torso",lowback:"torso",abs:"torso",
+  obliques:"torso",fdelt:"ua",sdelt:"ua",rdelt:"ua",biceps:"ua",triceps:"ua",
+  forearms:"fa",quads:"th",hams:"th",glutes:"hips",calves:"sh"};
+function pickGlow(rig,ex){
+  const part=MUS3[(ex.mus||[])[0]];
+  if(!part)return[];
+  const t=rig.meshes[part];
+  const arr=Array.isArray(t)?t:[t];
+  arr.forEach(m=>m.material=m.material.clone());  /* un-share before pulsing */
+  return arr;
+}
+function show3D(ex,day,stageEl){
+  hide3D();
+  const THREE=window.THREE;
+  const stage=stageEl||sheet.querySelector(".stage");
+  const w=stage.clientWidth||340, h=Math.round(w*250/320);
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+  renderer.setSize(w,h);
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  stage.appendChild(renderer.domElement);
+  const scene=new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff,0x2a3045,1.15));
+  const dir=new THREE.DirectionalLight(0xffffff,1.6);
+  dir.position.set(3,6,4);dir.castShadow=true;
+  dir.shadow.mapSize.set(1024,1024);
+  dir.shadow.camera.left=-3;dir.shadow.camera.right=3;
+  dir.shadow.camera.top=5;dir.shadow.camera.bottom=-1;
+  scene.add(dir);
+  const floor=new THREE.Mesh(new THREE.CircleGeometry(2.6,48),
+    new THREE.MeshStandardMaterial({color:0x181d2b,roughness:.92}));
+  floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+  const rig=buildRig(day.color);
+  scene.add(rig.group);
+  /* pose sequence: identical timing/easing to the SVG engine */
+  const poses=ex.poses.map(p=>pose3(ex,p));
+  const dur=ex.dur||1100, hold=180, segs=[];
+  for(let i=0;i<poses.length-1;i++)segs.push([poses[i],poses[i+1]]);
+  for(let i=poses.length-1;i>0;i--)segs.push([poses[i],poses[i-1]]);
+  const total=segs.length*(dur+hold), t0=performance.now();
+  rig.apply(poses[0]);
+  /* ---- equipment ---- */
+  {
+    const p0=poses[0], SS=1/50;
+    const accM=new THREE.MeshStandardMaterial({color:new THREE.Color(day.color),roughness:.4,metalness:.3});
+    const metal=new THREE.MeshStandardMaterial({color:0xb9c1d4,roughness:.35,metalness:.6});
+    const dark=new THREE.MeshStandardMaterial({color:0x252b3d,roughness:.85});
+    const mk=(geo,m)=>{const x=new THREE.Mesh(geo,m);x.castShadow=true;return x};
+    const db=hand=>{const g=new THREE.Group();
+      const h=mk(new THREE.CylinderGeometry(2.2*SS,2.2*SS,16*SS,10),metal);
+      h.rotation.x=Math.PI/2;g.add(h);
+      for(const z of[-1,1]){const pl=mk(new THREE.CylinderGeometry(6.5*SS,6.5*SS,5*SS,14),accM);
+        pl.rotation.x=Math.PI/2;pl.position.z=z*9*SS;g.add(pl)}
+      hand.add(g)};
+    const bar=(hand,plateR)=>{const g=new THREE.Group();
+      const b=mk(new THREE.CylinderGeometry(1.8*SS,1.8*SS,70*SS,10),metal);
+      b.rotation.x=Math.PI/2;b.position.z=-13*SS;g.add(b);
+      for(const z of[-48,22]){const pl=mk(new THREE.CylinderGeometry(plateR*SS,plateR*SS,6*SS,16),accM);
+        pl.rotation.x=Math.PI/2;pl.position.z=z*SS;g.add(pl)}
+      hand.add(g)};
+    if(ex.grip==="db"){
+      db(rig.sides[1].hand);
+      if(ex.poses.every(p=>p.ua2===undefined))db(rig.sides[-1].hand);
+    }else if(ex.grip==="bar")bar(rig.sides[1].hand,15);
+    else if(ex.grip==="ez"||ex.grip==="ezfront")bar(rig.sides[1].hand,8);
+    /* main bench aligned with the lying torso (mirror of SVG drawBenchAuto) */
+    if(ex.bench==="auto"||ex.mode==="flye"){
+      const a=p0.torso*Math.PI/180;
+      const hx=(p0.px-150)*SS, hy=(FLOOR-p0.py)*SS;
+      const u=[Math.sin(a),Math.cos(a)];
+      let n=[u[1],-u[0]]; if(n[1]>0)n=[-n[0],-n[1]];
+      const off=11*SS;
+      const p1=[hx-u[0]*18*SS+n[0]*off, hy-u[1]*18*SS+n[1]*off];
+      const p2=[hx+u[0]*85*SS+n[0]*off, hy+u[1]*85*SS+n[1]*off];
+      const len=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]);
+      const pad=mk(new THREE.BoxGeometry(len,6*SS,24*SS),dark);
+      pad.position.set((p1[0]+p2[0])/2,(p1[1]+p2[1])/2,0);
+      pad.rotation.z=Math.atan2(p2[1]-p1[1],p2[0]-p1[0]);
+      scene.add(pad);
+      for(const pp of[p1,p2]){
+        const leg=mk(new THREE.CylinderGeometry(1.6*SS,1.6*SS,Math.max(pp[1],.05),8),dark);
+        leg.position.set(pp[0],pp[1]/2,0);scene.add(leg);
+      }
+    }
+    /* support props (2D rect coords → world) */
+    const box=(x1,x2,y1,y2)=>{
+      const b=mk(new THREE.BoxGeometry((x2-x1)*SS,(y2-y1)*SS,26*SS),dark);
+      b.position.set(((x1+x2)/2-150)*SS,(FLOOR-(y1+y2)/2)*SS,0);scene.add(b);
+      for(const lx of[x1+8,x2-8]){
+        const ly=(FLOOR-y2)*SS;
+        const leg=mk(new THREE.CylinderGeometry(1.6*SS,1.6*SS,Math.max(ly,.05),8),dark);
+        leg.position.set((lx-150)*SS,ly/2,0);scene.add(leg);
+      }};
+    if(ex.prop==="benchR")box(226,300,200,210);
+    if(ex.prop==="benchL")box(42,114,206,216);
+    if(ex.prop==="seat")box(104,170,214,224);
+  }
+  /* working-muscle glow targets (cloned materials, pulsed in the loop) */
+  const glowMeshes=pickGlow(rig,ex);
+  const glowCol=new THREE.Color(day.color);
+  glowMeshes.forEach(m=>m.material.emissive=glowCol.clone());
+  /* movement trace: near hand (or ankle when no grip) sampled over the rep */
+  {
+    const point=ex.grip==="none"?rig.sides[1].ftG:rig.sides[1].hand;
+    const pts=[];const v=new THREE.Vector3();
+    for(let i=0;i<=20;i++){
+      rig.apply(lerpPose(poses[0],poses[1],i/20));
+      rig.group.updateMatrixWorld(true);
+      point.getWorldPosition(v);pts.push(v.clone());
+    }
+    rig.apply(poses[0]);
+    let plen=0;for(let i=1;i<pts.length;i++)plen+=pts[i].distanceTo(pts[i-1]);
+    if(plen>.56){ /* same 28-px rule as 2D, in world units */
+      const line=new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineDashedMaterial({color:0xffffff,transparent:true,opacity:.38,
+          dashSize:.06,gapSize:.09}));
+      line.computeLineDistances();scene.add(line);
+      const dirV=pts[20].clone().sub(pts[19]).normalize();
+      const cone=new THREE.Mesh(new THREE.ConeGeometry(.05,.13,10),
+        new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.55}));
+      cone.position.copy(pts[20]).addScaledVector(dirV,.07);
+      cone.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dirV);
+      scene.add(cone);
+    }
+  }
+  /* phase label overlay */
+  const lab=document.createElement("div");lab.className="t3-label";
+  stage.appendChild(lab);
+  let lastSi=-1;
+  const ph0=PH[ex.n];
+  if(ph0){lab.textContent=ph0[0];
+    lab.style.color=ph0[0].includes("↓")?"#8b93a7":day.color;lastSi=0}
+  const cam=new THREE.PerspectiveCamera(38,w/h,.1,50);
+  const st={renderer,scene,cam,az:-.55,pol:1.22,dist:6.4,ty:1.75,user:false,raf:0,
+            canvas:renderer.domElement,ptrs:new Map(),pd:0};
+  const cv=st.canvas;
+  cv.addEventListener("pointerdown",e=>{cv.setPointerCapture(e.pointerId);
+    st.ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+    if(st.ptrs.size===2){const p=[...st.ptrs.values()];st.pd=Math.hypot(p[0][0]-p[1][0],p[0][1]-p[1][1])}});
+  cv.addEventListener("pointermove",e=>{
+    if(!st.ptrs.has(e.pointerId))return;
+    const prev=st.ptrs.get(e.pointerId);st.ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+    st.user=true;
+    if(st.ptrs.size===1){
+      st.az-=(e.clientX-prev[0])*.006;
+      st.pol=Math.min(1.5,Math.max(.35,st.pol-(e.clientY-prev[1])*.004));
+    }else if(st.ptrs.size===2){
+      const p=[...st.ptrs.values()];const d=Math.hypot(p[0][0]-p[1][0],p[0][1]-p[1][1]);
+      if(st.pd)st.dist=Math.min(11,Math.max(3.2,st.dist*st.pd/d));st.pd=d;
+    }});
+  const drop=e=>{st.ptrs.delete(e.pointerId);st.pd=0};
+  cv.addEventListener("pointerup",drop);cv.addEventListener("pointercancel",drop);
+  cv.addEventListener("wheel",e=>{e.preventDefault();st.user=true;
+    st.dist=Math.min(11,Math.max(3.2,st.dist*(1+e.deltaY*.001)))},{passive:false});
+  function loop(){
+    const now=performance.now();
+    const t=(now-t0)%total;
+    const si=Math.min(Math.floor(t/(dur+hold)),segs.length-1);
+    const f=Math.min((t-si*(dur+hold))/dur,1);
+    rig.apply(lerpPose(segs[si][0],segs[si][1],ease(f)));
+    const pulse=.28+.18*Math.sin(now/350);
+    glowMeshes.forEach(m=>m.material.emissiveIntensity=pulse);
+    if(si!==lastSi){lastSi=si;
+      const ph=PH[ex.n];
+      if(ph){const txt=ph[si%2];lab.textContent=txt;
+        lab.style.color=txt.includes("↓")?"#8b93a7":day.color}}
+    if(!st.user)st.az+=.0035;
+    cam.position.set(st.dist*Math.sin(st.pol)*Math.sin(st.az),
+                     st.ty+st.dist*Math.cos(st.pol),
+                     st.dist*Math.sin(st.pol)*Math.cos(st.az));
+    cam.lookAt(0,st.ty,0);
+    renderer.render(scene,cam);
+    st.raf=requestAnimationFrame(loop);
+  }
+  st.loop=loop;st.label=lab;
+  st.raf=requestAnimationFrame(loop);
+  T3=st;
+}
+function hide3D(){
+  if(!T3)return;
+  cancelAnimationFrame(T3.raf);
+  T3.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();
+    if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose())}});
+  T3.renderer.dispose();
+  T3.canvas.remove();
+  T3.label?.remove();
+  T3=null;
+}
+/* pause the 3D loop while the page is hidden (battery) */
+document.addEventListener("visibilitychange",()=>{
+  if(!T3)return;
+  if(document.visibilityState==="hidden")cancelAnimationFrame(T3.raf);
+  else T3.raf=requestAnimationFrame(T3.loop);
+});
+
 /* ================= boot ================= */
 render();
 if(!ls.get("wc-profile"))openSetup(true);
+</script>
+<script type="module">
+/* three.js bridge: module build (UMD discontinued upstream). If this file is
+   missing or blocked, the app runs fine with SVG demos only. */
+import * as THREE from "./three.module.min.js";
+window.THREE=THREE;
+window.dispatchEvent(new Event("three-ready"));
 </script>
 </body>
 </html>
