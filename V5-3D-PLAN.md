@@ -107,6 +107,19 @@ or serve the repo folder directly.
 - [x] Memory updated; WhatsApp release note delivered to user
 - [x] Merge: "v5: real 3D mannequin demos"
 
+## v5.1 — realism polish (single session, branch `v5-1`) ✅ SHIPPED
+- [x] Tempo-true animation (2D + 3D): eccentric (↓) phase slower than the
+      working phase, ratio by goal (m 1.9× / s 2.3× / e 1.15×), via segDurs();
+      hold-labelled exercises (plank/farmer/twists) keep uniform timing
+- [x] Hand counter-rotation: held equipment stays level through the rep
+      (fixes the raise-dumbbell nit)
+- [x] Breathing chest + head micro-movement in the 3D loop (rig.breathe)
+- [x] Russian twists hold ONE dumbbell; row support bench raised to meet the
+      far hand (both s3 nits)
+- [x] Scene: ACES tone mapping, accent rim light, procedural rubber-tile floor
+- [x] QA: 28×3D sweep clean, 2D spot check, tempo values verified, console
+      clean; merged `v5-1` → main and verified live
+
 ## Status log
 - 2026-07-07: Plan created, branch `v5-3d` pushed. Nothing built yet.
 - 2026-07-07 (s1): Session 1 complete. 3D scene + static mannequin + orbit +
