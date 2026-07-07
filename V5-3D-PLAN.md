@@ -96,14 +96,16 @@ or serve the repo folder directly.
       dispose (geo+materials+renderer) already in place, re-verified
 - [x] Commit: "v5 s4: glow, traces, labels, workout mode, perf"
 
-### Session 5 — Sun eve: QA + DEPLOY
-- [ ] Full pass: every exercise × 2D/3D toggle × modal + workout mode; fresh
-      profile flow; console clean; check total payload size (target < 1 MB)
-- [ ] Update footer to v5; sync project `workout-coach.html` and `deploy/`
-      from repo `index.html`; archive `workout-coach-v4.html` in project folder
-- [ ] **Deploy:** merge `v5-3d` → `main`, push, curl the live URL until v5
-- [ ] Update memory files; draft WhatsApp release note for the user
-- [ ] Commit/merge: "v5: real 3D mannequin demos"
+### Session 5 — Sun eve: QA + DEPLOY ✅ DONE
+- [x] Full pass green: fresh profile flow, 28 exercises × 2D + 28 × 3D in the
+      modal (no leaks), workout mode in both modes with dispose/remount across
+      phases, adapted rest timer, console clean. Payload: 24.6 KB app +
+      171.5 KB three.js gzipped ≈ 196 KB total — well under 1 MB
+- [x] Footer bumped to v5; project `workout-coach.html`, `three.module.min.js`
+      and `deploy/` synced from repo; `workout-coach-v4.html` archived
+- [x] Deployed: `v5-3d` merged to `main`, live URL verified serving v5
+- [x] Memory updated; WhatsApp release note delivered to user
+- [x] Merge: "v5: real 3D mannequin demos"
 
 ## Status log
 - 2026-07-07: Plan created, branch `v5-3d` pushed. Nothing built yet.
@@ -139,3 +141,7 @@ or serve the repo folder directly.
   project files + archive v4, MERGE TO MAIN (the only deploy step), memory +
   release note. s3 cosmetic notes stand (row far hand, twist db overlap,
   raise db orientation) — fix in s5 only if trivial, else ship and note.
+- 2026-07-07 (s5): SHIPPED. Full QA matrix green (56 demo checks + workout
+  mode both modes + fresh profile + console). ~196 KB gzipped total. Merged
+  to main and verified live. The s3 cosmetic items ship as known-minor —
+  candidates for a v5.1 polish alongside tester feedback. PLAN COMPLETE.
