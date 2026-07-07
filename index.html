@@ -248,7 +248,7 @@
       <li><b>Form first:</b> technique always beats heavier weight.</li>
     </ul>
   </section>
-  <footer>Workout Coach v3 · self-contained · works offline · your settings never leave this device</footer>
+  <footer>Workout Coach v4 · self-contained · works offline · your settings never leave this device</footer>
 </div>
 
 <div class="overlay" id="overlay"></div>
@@ -572,13 +572,143 @@ function line(g,a,b,w,c,op){const l=el("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],
   stroke:c,"stroke-width":w,"stroke-linecap":"round",opacity:op??1});g.appendChild(l)}
 function poly(g,pts,w,c,op){const l=el("polyline",{points:pts.map(p=>p.join(",")).join(" "),
   stroke:c,"stroke-width":w,"stroke-linecap":"round","stroke-linejoin":"round",fill:"none",opacity:op??1});g.appendChild(l)}
-function circ(g,p,r,fill,stroke,sw){g.appendChild(el("circle",{cx:p[0],cy:p[1],r,fill:fill||"none",
-  stroke:stroke||"none","stroke-width":sw||0}))}
+function circ(g,p,r,fill,stroke,sw,op){g.appendChild(el("circle",{cx:p[0],cy:p[1],r,fill:fill||"none",
+  stroke:stroke||"none","stroke-width":sw||0,opacity:op??1}))}
 
-function drawDB(g,p,accent){
-  g.appendChild(el("rect",{x:p[0]-9,y:p[1]-3.4,width:18,height:6.8,rx:3.4,fill:accent}));
-  circ(g,[p[0]-8,p[1]],5,accent);circ(g,[p[0]+8,p[1]],5,accent);
-  circ(g,p,2.6,"#0e1016");}
+/* ---- capsule-body helpers (v4 visual style) ---- */
+const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+const mid=(a,b)=>mix(a,b,.5);
+function fkS(pose,far){
+  const hip=[pose.px,pose.py];
+  const sh=add(hip,du(pose.torso),LEN.torso);
+  const headC=add(sh,du(pose.head??pose.torso),LEN.neck+LEN.head);
+  const ua=far?(pose.ua2??pose.ua):pose.ua, fa=far?(pose.fa2??pose.fa):pose.fa,
+        th=far?(pose.th2??pose.th):pose.th, sg=far?(pose.sh2??pose.sh):pose.sh,
+        ft=far?(pose.ft2??pose.ft):pose.ft;
+  const eb=add(sh,dd(ua),LEN.ua), wr=add(eb,dd(fa),LEN.fa);
+  const kn=add(hip,dd(th),LEN.th), an=add(kn,dd(sg),LEN.sh), to=add(an,dd(ft),LEN.ft);
+  return{hip,sh,headC,eb,wr,kn,an,to};
+}
+function faceDir(pose){const u=du(pose.head??pose.torso);return[-u[1],u[0]]}
+function taper(g,p1,p2,w1,w2,fill){
+  const dx=p2[0]-p1[0],dy=p2[1]-p1[1],L=Math.hypot(dx,dy)||1;
+  const nx=-dy/L,ny=dx/L;
+  const pts=[[p1[0]+nx*w1/2,p1[1]+ny*w1/2],[p2[0]+nx*w2/2,p2[1]+ny*w2/2],
+             [p2[0]-nx*w2/2,p2[1]-ny*w2/2],[p1[0]-nx*w1/2,p1[1]-ny*w1/2]];
+  g.appendChild(el("polygon",{points:pts.map(p=>p.join(",")).join(" "),fill}));
+  circ(g,p1,w1/2,fill);circ(g,p2,w2/2,fill);
+}
+function limbSide(g,f,armC,legC){
+  taper(g,f.hip,f.kn,13,10,legC);
+  taper(g,f.kn,f.an,10,7,legC);
+  taper(g,f.an,f.to,6.5,5,legC);
+  taper(g,f.sh,f.eb,11,8.5,armC);
+  taper(g,f.eb,f.wr,8.5,6.5,armC);
+}
+/* phase labels per exercise: [poses 0→1, poses 1→0] */
+const PH={
+ "Flat Bench Press":["PRESS UP ↑","LOWER SLOW ↓"],
+ "Incline Bench Press":["PRESS UP ↑","LOWER SLOW ↓"],
+ "Decline Bench Press":["PRESS UP ↑","LOWER SLOW ↓"],
+ "Dumbbell Flyes":["OPEN WIDE ↓","SQUEEZE IN ↑"],
+ "Pullovers":["REACH BACK ↓","PULL OVER ↑"],
+ "Pullovers (Lat Focus)":["REACH BACK ↓","PULL OVER ↑"],
+ "Deadlift":["DRIVE UP ↑","LOWER SLOW ↓"],
+ "Bent-Over Row":["PULL TO WAIST ↑","LOWER SLOW ↓"],
+ "One-Arm Row":["PULL UP ↑","LOWER SLOW ↓"],
+ "Overhead Press":["PRESS UP ↑","LOWER SLOW ↓"],
+ "Lateral Raises":["RAISE ↑","LOWER SLOW ↓"],
+ "Upright Row":["PULL UP ↑","LOWER SLOW ↓"],
+ "Rear Delt Fly":["SWEEP BACK ↑","RETURN SLOW ↓"],
+ "EZ Bar Curl":["CURL ↑","LOWER SLOW ↓"],
+ "Hammer Curls":["CURL ↑","LOWER SLOW ↓"],
+ "Skullcrushers":["LOWER TO HEAD ↓","EXTEND UP ↑"],
+ "Concentration Curl":["CURL ↑","LOWER SLOW ↓"],
+ "Overhead Triceps Ext.":["LOWER BEHIND ↓","EXTEND UP ↑"],
+ "Squats":["SIT BACK ↓","DRIVE UP ↑"],
+ "Romanian Deadlift":["HINGE DOWN ↓","SQUEEZE UP ↑"],
+ "Lunges":["STEP DOWN ↓","PUSH BACK ↑"],
+ "Bulgarian Split Squat":["LOWER ↓","DRIVE UP ↑"],
+ "Calf Raises":["RISE UP ↑","LOWER SLOW ↓"],
+ "Plank Hold":["HOLD TIGHT","HOLD TIGHT"],
+ "Russian Twists":["TWIST & CONTROL","TWIST & CONTROL"],
+ "Leg Raises":["RAISE ↑","LOWER SLOW ↓"],
+ "Crunches":["CRUNCH ↑","LOWER SLOW ↓"],
+ "Farmer's Walk":["WALK TALL","WALK TALL"]
+};
+function glowPt(ex,pose,f){
+  const fd=faceDir(pose);
+  switch((ex.mus||[])[0]){
+    case"chest":return add(mix(f.sh,f.hip,.2),fd,7);
+    case"fdelt":case"sdelt":case"rdelt":return f.sh;
+    case"traps":return mix(f.sh,f.hip,.06);
+    case"lats":return mix(f.sh,f.hip,.32);
+    case"lowback":return add(mix(f.sh,f.hip,.55),fd,-6);
+    case"abs":case"obliques":return add(mix(f.sh,f.hip,.6),fd,5);
+    case"biceps":return add(mid(f.sh,f.eb),fd,3);
+    case"triceps":return add(mid(f.sh,f.eb),fd,-3);
+    case"forearms":return mid(f.eb,f.wr);
+    case"quads":return add(mid(f.hip,f.kn),fd,4);
+    case"hams":return add(mid(f.hip,f.kn),fd,-4);
+    case"glutes":return add(f.hip,fd,-7);
+    case"calves":return add(mid(f.kn,f.an),fd,-3);
+    default:return null;
+  }
+}
+function drawGlow(g,p,now){
+  const s=.8+.2*Math.sin((now||0)/350);
+  g.appendChild(el("ellipse",{cx:p[0],cy:p[1],rx:15*s,ry:11*s,fill:"url(#glowG)"}));
+}
+function pathLen(a){let l=0;for(let i=1;i<a.length;i++)l+=Math.hypot(a[i][0]-a[i-1][0],a[i][1]-a[i-1][1]);return l}
+function frontWrist(pose,s){
+  const top=[160,176-LEN.torso];
+  const shp=[top[0]+s*13,top[1]+4];
+  const eb=add(shp,[s*Math.sin(pose.ua*Math.PI/180),Math.cos(pose.ua*Math.PI/180)],LEN.ua);
+  return add(eb,[s*Math.sin(pose.fa*Math.PI/180),Math.cos(pose.fa*Math.PI/180)],LEN.fa);
+}
+function flyeWrist(pose,s){
+  const piv=[160,183],a=pose.a*Math.PI/180,b=(pose.a+14)*Math.PI/180;
+  const eb=[piv[0]+s*Math.sin(a)*LEN.ua,piv[1]-Math.cos(a)*LEN.ua];
+  return[eb[0]+s*Math.sin(b)*LEN.fa,eb[1]-Math.cos(b)*LEN.fa];
+}
+function traceArrs(ex,info){
+  const P=info.poses,out=[],N=10;
+  if(!P||P.length<2)return out;
+  if(ex.mode==="front"||ex.mode==="flye"){
+    const fn=ex.mode==="front"?frontWrist:flyeWrist;
+    for(const s of[-1,1]){const a=[];for(let i=0;i<=N;i++)a.push(fn(lerpPose(P[0],P[1],i/N),s));out.push(a)}
+  }else{
+    const a=[];for(let i=0;i<=N;i++){const f=fkS(lerpPose(P[0],P[1],i/N),false);
+      a.push(ex.grip==="none"?f.an:f.wr)}out.push(a);
+  }
+  return out;
+}
+function drawTraces(g,arrs){
+  for(const a of arrs){
+    if(pathLen(a)<=28)continue;
+    g.appendChild(el("polyline",{points:a.map(p=>p.join(",")).join(" "),fill:"none",
+      stroke:"#fff",opacity:.32,"stroke-width":2,"stroke-dasharray":"3 5","stroke-linecap":"round"}));
+    const p=a[a.length-2],q=a[a.length-1];
+    const dx=q[0]-p[0],dy=q[1]-p[1],L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
+    g.appendChild(el("polygon",{points:[[q[0]+ux*7,q[1]+uy*7],[q[0]-uy*4.5,q[1]+ux*4.5],
+      [q[0]+uy*4.5,q[1]-ux*4.5]].map(p=>p.join(",")).join(" "),fill:"#fff",opacity:.5}));
+  }
+}
+function drawLabel(g,ex,info,accent){
+  const ph=PH[ex.n];if(!ph)return;
+  const txt=ph[(info.si||0)%2];
+  const t=el("text",{x:302,y:48,"text-anchor":"end",fill:txt.includes("↓")?"#8b93a7":accent,
+    "font-size":"12","font-weight":"800","letter-spacing":"1.6","font-family":"inherit"});
+  t.textContent=txt;g.appendChild(t);
+}
+
+function drawDB(g,p,c){
+  g.appendChild(el("rect",{x:p[0]-10,y:p[1]-2.6,width:20,height:5.2,rx:2.6,fill:"#c9cfdd"}));
+  for(const s of[-1,1]){
+    g.appendChild(el("rect",{x:p[0]+s*9-2.6,y:p[1]-6.5,width:5.2,height:13,rx:2.2,fill:c}));
+    g.appendChild(el("rect",{x:p[0]+s*5.4-1.9,y:p[1]-5,width:3.8,height:10,rx:1.6,fill:c,opacity:.75}));
+  }
+  circ(g,p,2.4,"#0e1016");}
 function drawPlate(g,p,r,accent){circ(g,p,r,"#12151e",accent,2.5);circ(g,p,r*.35,"none",accent,1.5);}
 
 function drawBenchAuto(g,pose,accent){
@@ -592,80 +722,150 @@ function drawBenchAuto(g,pose,accent){
 function drawRect(g,x,y,w,h){g.appendChild(el("rect",{x,y,width:w,height:h,rx:3,fill:"#2a3040"}));
   line(g,[x+6,y+h],[x+6,FLOOR],5,"#232838");line(g,[x+w-6,y+h],[x+w-6,FLOOR],5,"#232838");}
 
-function renderSide(g,pose,ex,accent){
-  const dim="#525b73", main="#e8ecf7";
-  const hip=[pose.px,pose.py];
-  const sh=add(hip,du(pose.torso),LEN.torso);
-  const headA=(pose.head??pose.torso);
-  const headC=add(sh,du(headA),LEN.neck+LEN.head);
-  const ua2=pose.ua2??pose.ua, fa2=pose.fa2??pose.fa,
-        th2=pose.th2??pose.th, sh2=pose.sh2??pose.sh, ft2=pose.ft2??pose.ft;
-  const el2=add(sh,dd(ua2),LEN.ua), wr2=add(el2,dd(fa2),LEN.fa);
-  const kn2=add(hip,dd(th2),LEN.th), an2=add(kn2,dd(sh2),LEN.sh), to2=add(an2,dd(ft2),LEN.ft);
-  poly(g,[hip,kn2,an2,to2],7,dim);
-  poly(g,[sh,el2,wr2],7,dim);
-  if(ex.grip==="db")drawDB(g,wr2,"#3a4258");
+function renderSide(g,pose,ex,accent,info){
+  info=info||{};
+  const main="#e8ecf7", dimA="#454e66", dimL="#4d5670";
+  const f=fkS(pose,false), f2=fkS(pose,true);
+  /* ground shadow */
+  const xs=[f.hip,f.sh,f.headC,f.wr,f.to,f2.wr,f2.to].map(p=>p[0]);
+  const mn=Math.min(...xs), mx=Math.max(...xs);
+  g.appendChild(el("ellipse",{cx:(mn+mx)/2,cy:FLOOR-1,rx:(mx-mn)/2+12,ry:6,fill:"#000",opacity:.35}));
+  const traces=traceArrs(ex,info);
+  const moving=traces.some(a=>pathLen(a)>28);
+  /* ghost of start position */
+  if(moving&&info.ghost){
+    const gg=el("g",{opacity:.13});g.appendChild(gg);
+    const gf=fkS(info.ghost,false);
+    limbSide(gg,gf,accent,accent);
+    if(ex.grip==="db")drawDB(gg,gf.wr,accent);
+  }
+  /* far limbs */
+  limbSide(g,f2,dimA,dimL);
+  const farDb=ex.grip==="db"&&ex.poses.every(p=>p.ua2===undefined);
+  if(farDb)drawDB(g,f2.wr,"#59637f");
+  /* props */
   if(ex.bench==="auto")drawBenchAuto(g,pose,accent);
   if(ex.prop==="benchR")drawRect(g,226,200,74,10);
   if(ex.prop==="benchL")drawRect(g,42,206,72,10);
   if(ex.prop==="seat")drawRect(g,104,214,66,10);
-  line(g,hip,sh,9,main);
-  circ(g,headC,LEN.head,main);
-  const el1=add(sh,dd(pose.ua),LEN.ua), wr1=add(el1,dd(pose.fa),LEN.fa);
-  const kn1=add(hip,dd(pose.th),LEN.th), an1=add(kn1,dd(pose.sh),LEN.sh), to1=add(an1,dd(pose.ft),LEN.ft);
-  poly(g,[hip,kn1,an1,to1],7.5,accent);
-  poly(g,[sh,el1,wr1],7.5,accent);
-  if(ex.grip==="db")drawDB(g,wr1,accent);
-  else if(ex.grip==="bar")drawPlate(g,wr1,15,accent);
-  else if(ex.grip==="ez")drawPlate(g,wr1,8,accent);
-  circ(g,el1,3.2,"#0e1016");circ(g,kn1,3.2,"#0e1016");
+  /* torso, neck, head */
+  taper(g,f.hip,f.sh,15,19,main);
+  taper(g,f.sh,add(f.sh,du(pose.head??pose.torso),LEN.neck+3),10,7,main);
+  circ(g,f.headC,LEN.head,main);
+  const fd=faceDir(pose);
+  circ(g,add(add(f.headC,fd,4.5),du(pose.head??pose.torso),2),1.7,"#0e1016");
+  /* working-muscle glow */
+  const gp=glowPt(ex,pose,f);
+  if(gp)drawGlow(g,gp,info.now);
+  /* near limbs */
+  limbSide(g,f,accent,accent);
+  for(const p of[f.eb,f.kn])circ(g,p,2.6,"#0e1016",null,0,.5);
+  /* movement trace */
+  if(moving)drawTraces(g,traces);
+  /* equipment in near hand */
+  if(ex.grip==="db")drawDB(g,f.wr,accent);
+  else if(ex.grip==="bar")drawPlate(g,f.wr,15,accent);
+  else if(ex.grip==="ez")drawPlate(g,f.wr,8,accent);
+  drawLabel(g,ex,info,accent);
 }
 
-function renderFront(g,pose,ex,accent){
+function renderFront(g,pose,ex,accent,info){
+  info=info||{};
   const main="#e8ecf7", px=160, py=176;
   const top=[px,py-LEN.torso];
-  for(const s of[-1,1]){
-    const kn=add([px,py],[Math.sin(s*7*Math.PI/180),Math.cos(s*7*Math.PI/180)],LEN.th);
-    const an=add(kn,[Math.sin(s*7*Math.PI/180),Math.cos(s*7*Math.PI/180)],LEN.sh);
-    poly(g,[[px,py],kn,an,[an[0]+s*9,an[1]+3]],7.5,s<0?"#525b73":accent);
+  g.appendChild(el("ellipse",{cx:px,cy:FLOOR-1,rx:70,ry:6,fill:"#000",opacity:.35}));
+  const traces=traceArrs(ex,info);
+  const moving=traces.some(a=>pathLen(a)>28);
+  /* ghost arms at start position */
+  if(moving&&info.ghost){
+    const gg=el("g",{opacity:.13});g.appendChild(gg);
+    for(const s of[-1,1]){
+      const shp=[top[0]+s*13,top[1]+4];
+      const eb=add(shp,[s*Math.sin(info.ghost.ua*Math.PI/180),Math.cos(info.ghost.ua*Math.PI/180)],LEN.ua);
+      const wr=add(eb,[s*Math.sin(info.ghost.fa*Math.PI/180),Math.cos(info.ghost.fa*Math.PI/180)],LEN.fa);
+      taper(gg,shp,eb,11,8.5,accent);taper(gg,eb,wr,8.5,6.5,accent);
+      if(ex.grip==="db")circ(gg,wr,7,accent);
+    }
   }
-  line(g,[px,py],top,10,main);
+  /* legs */
+  for(const s of[-1,1]){
+    const dir=[Math.sin(s*7*Math.PI/180),Math.cos(s*7*Math.PI/180)];
+    const kn=add([px,py],dir,LEN.th), an=add(kn,dir,LEN.sh);
+    const c=s<0?"#4d5670":accent;
+    taper(g,[px,py],kn,12,9.5,c);taper(g,kn,an,9.5,7,c);
+    taper(g,an,[an[0]+s*10,an[1]+3],6.5,5,c);
+  }
+  /* torso, neck, head */
+  taper(g,[px,py],top,16,21,main);
+  taper(g,top,[top[0],top[1]-LEN.neck-2],9,7,main);
   circ(g,[top[0],top[1]-LEN.neck-LEN.head+2],LEN.head,main);
+  circ(g,[top[0]-3.5,top[1]-LEN.neck-LEN.head+1],1.6,"#0e1016");
+  circ(g,[top[0]+3.5,top[1]-LEN.neck-LEN.head+1],1.6,"#0e1016");
+  /* working-muscle glow */
+  const m0=(ex.mus||[])[0], anchors=[];
+  if(m0==="sdelt"||m0==="fdelt"||m0==="rdelt")anchors.push([top[0]-15,top[1]+4],[top[0]+15,top[1]+4]);
+  else if(m0==="traps")anchors.push([top[0],top[1]-2]);
+  else if(m0==="biceps")for(const s of[-1,1])anchors.push([top[0]+s*17,top[1]+22]);
+  for(const p of anchors)drawGlow(g,p,info.now);
+  /* arms */
   const wrists=[];
   for(const s of[-1,1]){
     const shp=[top[0]+s*13,top[1]+4];
     const eb=add(shp,[s*Math.sin(pose.ua*Math.PI/180),Math.cos(pose.ua*Math.PI/180)],LEN.ua);
     const wr=add(eb,[s*Math.sin(pose.fa*Math.PI/180),Math.cos(pose.fa*Math.PI/180)],LEN.fa);
-    poly(g,[shp,eb,wr],7.5,s<0?"#525b73":accent);
+    const c=s<0?"#4d5670":accent;
+    taper(g,shp,eb,11,8.5,c);taper(g,eb,wr,8.5,6.5,c);
     wrists.push(wr);
-    if(ex.grip==="db"){circ(g,wr,6.5,s<0?"#3a4258":accent);circ(g,wr,2.4,"#0e1016")}
+    if(ex.grip==="db"){circ(g,wr,7,c);circ(g,wr,2.5,"#0e1016")}
   }
   if(ex.grip==="ezfront"){line(g,wrists[0],wrists[1],6,accent);
     circ(g,wrists[0],5,"#12151e",accent,2);circ(g,wrists[1],5,"#12151e",accent,2);}
+  if(moving)drawTraces(g,traces);
+  drawLabel(g,ex,info,accent);
 }
 
-function renderFlye(g,pose,ex,accent){
-  const main="#e8ecf7", cx=160;
+function renderFlye(g,pose,ex,accent,info){
+  info=info||{};
+  const main="#e8ecf7", cx=160, piv=[cx,183];
+  g.appendChild(el("ellipse",{cx,cy:FLOOR-1,rx:60,ry:6,fill:"#000",opacity:.35}));
   drawRect(g,138,208,44,12);
   circ(g,[cx,172],LEN.head,"#525b73");
   g.appendChild(el("ellipse",{cx,cy:196,rx:27,ry:15,fill:main}));
-  const piv=[cx,183];
+  const traces=traceArrs(ex,info);
+  /* ghost arms at start position */
+  if(info.ghost){
+    const gg=el("g",{opacity:.13});g.appendChild(gg);
+    for(const s of[-1,1]){
+      const a=info.ghost.a*Math.PI/180,b=(info.ghost.a+14)*Math.PI/180;
+      const eb=[piv[0]+s*Math.sin(a)*LEN.ua,piv[1]-Math.cos(a)*LEN.ua];
+      const wr=[eb[0]+s*Math.sin(b)*LEN.fa,eb[1]-Math.cos(b)*LEN.fa];
+      taper(gg,piv,eb,11,8.5,accent);taper(gg,eb,wr,8.5,6.5,accent);
+      circ(gg,wr,7,accent);
+    }
+  }
+  drawGlow(g,[cx,178],info.now);
   for(const s of[-1,1]){
     const a=pose.a*Math.PI/180, b=(pose.a+14)*Math.PI/180;
     const eb=[piv[0]+s*Math.sin(a)*LEN.ua, piv[1]-Math.cos(a)*LEN.ua];
     const wr=[eb[0]+s*Math.sin(b)*LEN.fa, eb[1]-Math.cos(b)*LEN.fa];
-    poly(g,[piv,eb,wr],7.5,accent);
+    taper(g,piv,eb,11,8.5,accent);taper(g,eb,wr,8.5,6.5,accent);
     circ(g,wr,7,accent);circ(g,wr,2.6,"#0e1016");
   }
+  drawTraces(g,traces);
+  drawLabel(g,ex,info,accent);
 }
 
-function drawFrame(svg,ex,pose,accent){
+function drawFrame(svg,ex,pose,accent,info){
   svg.innerHTML="";
+  const d=el("defs",{}), rg=el("radialGradient",{id:"glowG"});
+  rg.appendChild(el("stop",{offset:"0%","stop-color":accent,"stop-opacity":".6"}));
+  rg.appendChild(el("stop",{offset:"100%","stop-color":accent,"stop-opacity":"0"}));
+  d.appendChild(rg);svg.appendChild(d);
   const g=el("g",{});svg.appendChild(g);
   line(g,[16,FLOOR],[304,FLOOR],2.5,"#2b3140");
-  if(ex.mode==="flye")renderFlye(g,pose,ex,accent);
-  else if(ex.mode==="front")renderFront(g,pose,ex,accent);
-  else renderSide(g,pose,ex,accent);
+  if(ex.mode==="flye")renderFlye(g,pose,ex,accent,info);
+  else if(ex.mode==="front")renderFront(g,pose,ex,accent,info);
+  else renderSide(g,pose,ex,accent,info);
 }
 
 function lerpPose(a,b,t){const o={};
@@ -681,13 +881,14 @@ function animate(svg,ex,accent){
   for(let i=0;i<poses.length-1;i++)segs.push([poses[i],poses[i+1]]);
   for(let i=poses.length-1;i>0;i--)segs.push([poses[i],poses[i-1]]);
   const total=segs.length*(dur+hold);
-  drawFrame(svg,ex,poses[0],accent);   /* immediate first frame (rAF may be throttled) */
+  const binfo={poses,ghost:poses[0]};
+  drawFrame(svg,ex,poses[0],accent,{...binfo,si:0,now:0});  /* immediate first frame */
   let start=performance.now();
   function tick(now){
     let t=(now-start)%total;
     const si=Math.min(Math.floor(t/(dur+hold)),segs.length-1);
     let f=(t-si*(dur+hold))/dur; f=Math.min(f,1);
-    drawFrame(svg,ex,lerpPose(segs[si][0],segs[si][1],ease(f)),accent);
+    drawFrame(svg,ex,lerpPose(segs[si][0],segs[si][1],ease(f)),accent,{...binfo,si,now});
     rafId=requestAnimationFrame(tick);
   }
   rafId=requestAnimationFrame(tick);
