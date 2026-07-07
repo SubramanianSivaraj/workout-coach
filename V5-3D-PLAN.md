@@ -47,15 +47,21 @@ or serve the repo folder directly.
       only via `can3D()` gate; full dispose on toggle-off/close (verified)
 - [x] Commit: "v5 s1: three.js scene, mannequin, orbit, modal toggle"
 
-### Session 2 — Sat PM: rig + pose mapping
-- [ ] Joint hierarchy (pelvis→torso→head, shoulders→elbows, hips→knees→ankles)
-      posed from existing pose fields (torso/ua/fa/th/sh/ft + *2 far-side)
-- [ ] Pose interpolation reusing lerpPose/ease; ping-pong loop identical to SVG
-- [ ] Verify side-plane exercises animate correctly: bench press, squat,
-      deadlift, curl, plank
-- [ ] Lying poses: mannequin orientation on bench (torso angle drives whole-body
-      rotation, same as SVG bench auto)
-- [ ] Commit: "v5 s2: rigged mannequin animates side-plane exercises"
+### Session 2 — Sat PM: rig + pose mapping ✅ DONE
+- [x] Joint hierarchy in buildRig(): root(pelvis)→torsoG→neckG/head +
+      shoulder/elbow/hand groups (children of torsoG), hip/knee/foot groups
+      (children of root). +z limbs = near/base pose fields, −z = *2 far fields.
+      Angle convention documented in code comment (bones rest along −Y,
+      rotation.z=+angle; torso rests +Y, rotation.z=−angle; children subtract
+      parent angle since 2D angles are absolute)
+- [x] Pose interpolation: same lerpPose/ease/dur/hold ping-pong as SVG engine,
+      stepped inside the 3D render loop
+- [x] Verified animating in 3D: Flat Bench Press, Squats, Deadlift, EZ Bar
+      Curl, Plank Hold (+ Overhead Press) — rig mounts, animates, disposes
+- [x] Lying orientation correct (bench press horizontal on back, plank prone
+      in a straight line). NOTE: lying exercises float at bench height — the
+      bench MESH is session 3 scope (equipment)
+- [x] Commit: "v5 s2: rigged mannequin animates side-plane exercises"
 
 ### Session 3 — Sun AM: all 28 exercises + equipment
 - [ ] `p3` abduction overrides for ex-front-mode exercises (lateral raises,
@@ -94,3 +100,12 @@ or serve the repo folder directly.
   mannequin in buildMannequin() is positioned directly (no joint hierarchy) —
   s2 should restructure it into pivot groups (shoulder/elbow/hip/knee) before
   posing. can3D() gate currently allows Overhead Press only — widen in s3.
+- 2026-07-07 (s2): Session 2 complete. buildRig() replaces the static mannequin;
+  all six gated exercises animate with correct mechanics (squat depth, plank
+  horizontal, bench lying) and clean console. Handoff to s3: (1) widen V5_3D
+  gate to all exercises incl. front/flye modes — those two modes need a pose
+  adapter (front poses only have ua/fa; flye only has `a`), plan is `p3`
+  overrides per pose; (2) equipment meshes — rig exposes `hand` groups inside
+  each elbow for attaching dumbbells/bars; bench mesh needed under lying
+  exercises (derive from torso angle like SVG drawBenchAuto); (3) far-side
+  material is dimmed accent (×.55) for side-readability, matches 2D.

@@ -1251,8 +1251,10 @@ let SHEET=null, T3=null;
 window.addEventListener("three-ready",()=>{if(SHEET)applyStageMode()});
 function webglOK(){try{const c=document.createElement("canvas");
   return !!(c.getContext("webgl2")||c.getContext("webgl"))}catch(e){return false}}
-function can3D(ex){ /* session 1: Overhead Press only; widened in later sessions */
-  return ex.n==="Overhead Press"&&!!window.THREE&&webglOK();
+/* session 2: side-plane exercises; front/flye modes come in session 3 */
+const V5_3D=["Overhead Press","Flat Bench Press","Squats","Deadlift","EZ Bar Curl","Plank Hold"];
+function can3D(ex){
+  return V5_3D.includes(ex.n)&&!!window.THREE&&webglOK();
 }
 function applyStageMode(){
   if(!SHEET)return;
@@ -1270,29 +1272,60 @@ document.getElementById("t3-toggle").onclick=()=>{
   if(ls.get("wc-3d")==="1")ls.del("wc-3d");else ls.set("wc-3d","1");
   applyStageMode();
 };
-function buildMannequin(accent){
-  const THREE=window.THREE, S=1/50, G=new THREE.Group();
+/* Jointed rig. 2D pose convention → 3D: screen x → +X, screen y-down → -Y.
+   dirDown(a)=(sin a,cos a) screen ⇒ world (sin a,-cos a): bone resting along -Y
+   needs rotation.z=+a. dirUp(a) ⇒ bone resting along +Y needs rotation.z=-a.
+   Arm/leg pose angles are absolute, so children subtract their parent's angle. */
+function buildRig(accent){
+  const THREE=window.THREE, S=1/50;
   const skin=new THREE.MeshStandardMaterial({color:0xe8ecf7,roughness:.55,metalness:.05});
-  const acc=new THREE.MeshStandardMaterial({color:new THREE.Color(accent),roughness:.5,metalness:.05});
-  const cap=(len,r,m)=>{const me=new THREE.Mesh(new THREE.CapsuleGeometry(r,len,6,14),m);
-    me.castShadow=true;return me};
-  const hipY=88*S, shY=hipY+55*S;
-  const torso=cap(55*S,9.5*S,skin);torso.position.y=(hipY+shY)/2;G.add(torso);
-  const hips=cap(16*S,7*S,skin);hips.rotation.z=Math.PI/2;hips.position.y=hipY;G.add(hips);
-  const sho=cap(22*S,6.5*S,skin);sho.rotation.z=Math.PI/2;sho.position.y=shY;G.add(sho);
-  const neck=cap(9*S,4*S,skin);neck.position.y=shY+7*S;G.add(neck);
-  const head=new THREE.Mesh(new THREE.SphereGeometry(10.5*S,20,16),skin);
-  head.castShadow=true;head.position.y=shY+(9+10.5)*S;G.add(head);
+  const near=new THREE.MeshStandardMaterial({color:new THREE.Color(accent),roughness:.5,metalness:.05});
+  const farM=near.clone();farM.color=near.color.clone().multiplyScalar(.55);
+  const grp=new THREE.Group();
+  const mesh=(geo,m)=>{const x=new THREE.Mesh(geo,m);x.castShadow=true;return x};
+  const bone=(len,rad,m,up)=>{const g=new THREE.Group();
+    const c=mesh(new THREE.CapsuleGeometry(rad,len,6,14),m);
+    c.position.y=(up?1:-1)*len/2;g.add(c);return g};
+  /* pelvis */
+  const hips=mesh(new THREE.CapsuleGeometry(7*S,16*S,6,14),skin);
+  hips.rotation.x=Math.PI/2;grp.add(hips);
+  /* torso chain */
+  const torsoG=bone(55*S,9.5*S,skin,true);grp.add(torsoG);
+  const shoBar=mesh(new THREE.CapsuleGeometry(6.5*S,26*S,6,14),skin);
+  shoBar.rotation.x=Math.PI/2;shoBar.position.y=55*S;torsoG.add(shoBar);
+  const neckG=bone(9*S,4*S,skin,true);neckG.position.y=55*S;torsoG.add(neckG);
+  const head=mesh(new THREE.SphereGeometry(10.5*S,20,16),skin);
+  head.position.y=(9+10.5)*S;neckG.add(head);
+  /* limbs: +z = near side (pose base fields), -z = far side (*2 fields) */
+  const sides={};
   for(const s of[-1,1]){
-    const ax=s*16*S;
-    const ua=cap(34*S,5.5*S,acc);ua.position.set(ax,shY-17*S,0);ua.rotation.z=s*.12;G.add(ua);
-    const fa=cap(30*S,4.6*S,acc);fa.position.set(ax+s*7*S,shY-49*S,0);fa.rotation.z=s*.16;G.add(fa);
-    const lx=s*8*S;
-    const th=cap(46*S,7*S,acc);th.position.set(lx,hipY-23*S,0);G.add(th);
-    const sg=cap(42*S,5.5*S,acc);sg.position.set(lx,hipY-67*S,0);G.add(sg);
-    const ft=cap(16*S,4.5*S,acc);ft.rotation.x=Math.PI/2;ft.position.set(lx,4.5*S,7*S);G.add(ft);
+    const m=s>0?near:farM;
+    const shG=bone(34*S,5.5*S,m,false);shG.position.set(0,55*S,s*13*S);torsoG.add(shG);
+    const elG=bone(30*S,4.6*S,m,false);elG.position.y=-34*S;shG.add(elG);
+    const hand=new THREE.Group();hand.position.y=-30*S;elG.add(hand);
+    const hipG=bone(46*S,7*S,m,false);hipG.position.set(0,0,s*8*S);grp.add(hipG);
+    const knG=bone(42*S,5.5*S,m,false);knG.position.y=-46*S;hipG.add(knG);
+    const ftG=bone(16*S,4.5*S,m,false);ftG.position.y=-42*S;knG.add(ftG);
+    sides[s]={shG,elG,hand,hipG,knG,ftG};
   }
-  return G;
+  const r=d=>d*Math.PI/180;
+  function apply(p){
+    grp.position.set((p.px-150)*S,(FLOOR-p.py)*S,0);
+    torsoG.rotation.z=-r(p.torso);
+    neckG.rotation.z=-r((p.head??p.torso)-p.torso);
+    for(const s of[-1,1]){
+      const q=sides[s], far=s<0;
+      const ua=far?(p.ua2??p.ua):p.ua, fa=far?(p.fa2??p.fa):p.fa,
+            th=far?(p.th2??p.th):p.th, sh=far?(p.sh2??p.sh):p.sh,
+            ft=far?(p.ft2??p.ft):p.ft;
+      q.shG.rotation.z=r(ua+p.torso);   /* parent torsoG carries -torso */
+      q.elG.rotation.z=r(fa-ua);
+      q.hipG.rotation.z=r(th);
+      q.knG.rotation.z=r(sh-th);
+      q.ftG.rotation.z=r(ft-sh);
+    }
+  }
+  return{group:grp,apply,sides};
 }
 function show3D(ex,day){
   hide3D();
@@ -1315,7 +1348,15 @@ function show3D(ex,day){
   const floor=new THREE.Mesh(new THREE.CircleGeometry(2.6,48),
     new THREE.MeshStandardMaterial({color:0x181d2b,roughness:.92}));
   floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
-  scene.add(buildMannequin(day.color));
+  const rig=buildRig(day.color);
+  scene.add(rig.group);
+  /* pose sequence: identical timing/easing to the SVG engine */
+  const poses=ex.poses.map(p=>({...S,...p}));
+  const dur=ex.dur||1100, hold=180, segs=[];
+  for(let i=0;i<poses.length-1;i++)segs.push([poses[i],poses[i+1]]);
+  for(let i=poses.length-1;i>0;i--)segs.push([poses[i],poses[i-1]]);
+  const total=segs.length*(dur+hold), t0=performance.now();
+  rig.apply(poses[0]);
   const cam=new THREE.PerspectiveCamera(38,w/h,.1,50);
   const st={renderer,scene,cam,az:-.55,pol:1.22,dist:6.4,ty:1.75,user:false,raf:0,
             canvas:renderer.domElement,ptrs:new Map(),pd:0};
@@ -1339,6 +1380,10 @@ function show3D(ex,day){
   cv.addEventListener("wheel",e=>{e.preventDefault();st.user=true;
     st.dist=Math.min(11,Math.max(3.2,st.dist*(1+e.deltaY*.001)))},{passive:false});
   function loop(){
+    const t=(performance.now()-t0)%total;
+    const si=Math.min(Math.floor(t/(dur+hold)),segs.length-1);
+    const f=Math.min((t-si*(dur+hold))/dur,1);
+    rig.apply(lerpPose(segs[si][0],segs[si][1],ease(f)));
     if(!st.user)st.az+=.0035;
     cam.position.set(st.dist*Math.sin(st.pol)*Math.sin(st.az),
                      st.ty+st.dist*Math.cos(st.pol),
