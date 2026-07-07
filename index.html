@@ -255,7 +255,7 @@
       <li><b>Form first:</b> technique always beats heavier weight.</li>
     </ul>
   </section>
-  <footer>Workout Coach v5 · 3D + 2D demos · works offline · your settings never leave this device</footer>
+  <footer>Workout Coach v5.1 · 3D + 2D demos · works offline · your settings never leave this device</footer>
 </div>
 
 <div class="overlay" id="overlay"></div>
@@ -644,6 +644,15 @@ const PH={
  "Crunches":["CRUNCH ↑","LOWER SLOW ↓"],
  "Farmer's Walk":["WALK TALL","WALK TALL"]
 };
+/* tempo-true segment durations: the lowering (↓) phase runs slower than the
+   working phase, scaled by the goal's prescribed tempo */
+function segDurs(ex){
+  const base=(ex.dur||1100)*.8;
+  const ph=PH[ex.n]||[];
+  if(!ph.some(l=>l.includes("↓")))return[ex.dur||1100,ex.dur||1100];
+  const ratio=P.goal==="e"?1.15:(P.goal==="s"?2.3:1.9);
+  return[0,1].map(i=>Math.round((ph[i]||"").includes("↓")?base*ratio:base));
+}
 function glowPt(ex,pose,f){
   const fd=faceDir(pose);
   switch((ex.mus||[])[0]){
@@ -884,18 +893,18 @@ function animate(svg,ex,accent){
   cancelAnimationFrame(rafId);
   const base=ex.mode?{}:S;
   const poses=ex.poses.map(p=>({...base,...p}));
-  const dur=ex.dur||1100, hold=180;
+  const durs=segDurs(ex), hold=180;
   const segs=[];
   for(let i=0;i<poses.length-1;i++)segs.push([poses[i],poses[i+1]]);
   for(let i=poses.length-1;i>0;i--)segs.push([poses[i],poses[i-1]]);
-  const total=segs.length*(dur+hold);
+  const total=segs.reduce((a,_,i)=>a+durs[i%2]+hold,0);
   const binfo={poses,ghost:poses[0]};
   drawFrame(svg,ex,poses[0],accent,{...binfo,si:0,now:0});  /* immediate first frame */
   let start=performance.now();
   function tick(now){
-    let t=(now-start)%total;
-    const si=Math.min(Math.floor(t/(dur+hold)),segs.length-1);
-    let f=(t-si*(dur+hold))/dur; f=Math.min(f,1);
+    let t=(now-start)%total, si=0;
+    while(si<segs.length-1&&t>=durs[si%2]+hold){t-=durs[si%2]+hold;si++}
+    const f=Math.min(t/durs[si%2],1);
     drawFrame(svg,ex,lerpPose(segs[si][0],segs[si][1],ease(f)),accent,{...binfo,si,now});
     rafId=requestAnimationFrame(tick);
   }
@@ -1343,12 +1352,21 @@ function buildRig(accent){
       q.shG.rotation.x=-s*r(p.abd||0);  /* frontal-plane abduction */
       q.elG.rotation.z=r(fa-ua);
       q.elG.rotation.x=-s*r((p.fabd||0)-(p.abd||0));
+      /* counter-rotate the hand so held equipment stays level */
+      q.hand.rotation.z=-r(fa);
+      q.hand.rotation.x=s*r(p.fabd||0);
       q.hipG.rotation.z=r(th);
       q.knG.rotation.z=r(sh-th);
       q.ftG.rotation.z=r(ft-sh);
     }
   }
-  return{group:grp,apply,sides,meshes};
+  /* subtle life: breathing chest + head micro-movement (added after apply) */
+  function breathe(now){
+    const b=1+.018*Math.sin(now/850);
+    meshes.torso.scale.set(b,1,b);
+    neckG.rotation.z+=.028*Math.sin(now/1150);
+  }
+  return{group:grp,apply,sides,meshes,breathe};
 }
 /* which rig meshes glow for a given primary muscle */
 const MUS3={chest:"torso",traps:"torso",lats:"torso",lowback:"torso",abs:"torso",
@@ -1371,26 +1389,38 @@ function show3D(ex,day,stageEl){
   renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
   renderer.setSize(w,h);
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
   stage.appendChild(renderer.domElement);
   const scene=new THREE.Scene();
-  scene.add(new THREE.HemisphereLight(0xffffff,0x2a3045,1.15));
-  const dir=new THREE.DirectionalLight(0xffffff,1.6);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x2a3045,1.35));
+  const dir=new THREE.DirectionalLight(0xffffff,1.9);
   dir.position.set(3,6,4);dir.castShadow=true;
   dir.shadow.mapSize.set(1024,1024);
   dir.shadow.camera.left=-3;dir.shadow.camera.right=3;
   dir.shadow.camera.top=5;dir.shadow.camera.bottom=-1;
   scene.add(dir);
+  const rim=new THREE.DirectionalLight(new THREE.Color(day.color),.55);
+  rim.position.set(-4,3,-3);scene.add(rim);
+  /* procedural rubber-tile floor */
+  const fc=document.createElement("canvas");fc.width=fc.height=256;
+  const fx=fc.getContext("2d");
+  fx.fillStyle="#10131d";fx.fillRect(0,0,256,256);
+  fx.strokeStyle="rgba(255,255,255,.045)";fx.lineWidth=2;
+  for(let i=0;i<=256;i+=64){fx.beginPath();fx.moveTo(i,0);fx.lineTo(i,256);
+    fx.moveTo(0,i);fx.lineTo(256,i);fx.stroke()}
+  const ftex=new THREE.CanvasTexture(fc);
+  ftex.wrapS=ftex.wrapT=THREE.RepeatWrapping;ftex.repeat.set(3,3);
   const floor=new THREE.Mesh(new THREE.CircleGeometry(2.6,48),
-    new THREE.MeshStandardMaterial({color:0x181d2b,roughness:.92}));
+    new THREE.MeshStandardMaterial({map:ftex,roughness:.92}));
   floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
   const rig=buildRig(day.color);
   scene.add(rig.group);
-  /* pose sequence: identical timing/easing to the SVG engine */
+  /* pose sequence: identical timing/easing to the SVG engine (tempo-true) */
   const poses=ex.poses.map(p=>pose3(ex,p));
-  const dur=ex.dur||1100, hold=180, segs=[];
+  const durs=segDurs(ex), hold=180, segs=[];
   for(let i=0;i<poses.length-1;i++)segs.push([poses[i],poses[i+1]]);
   for(let i=poses.length-1;i>0;i--)segs.push([poses[i],poses[i-1]]);
-  const total=segs.length*(dur+hold), t0=performance.now();
+  const total=segs.reduce((a,_,i)=>a+durs[i%2]+hold,0), t0=performance.now();
   rig.apply(poses[0]);
   /* ---- equipment ---- */
   {
@@ -1413,7 +1443,10 @@ function show3D(ex,day,stageEl){
       hand.add(g)};
     if(ex.grip==="db"){
       db(rig.sides[1].hand);
-      if(ex.poses.every(p=>p.ua2===undefined))db(rig.sides[-1].hand);
+      /* far dumbbell only when both arms lift and it's a two-dumbbell move
+         (Russian twists hold ONE dumbbell in both hands) */
+      if(ex.n!=="Russian Twists"&&ex.poses.every(p=>p.ua2===undefined))
+        db(rig.sides[-1].hand);
     }else if(ex.grip==="bar")bar(rig.sides[1].hand,15);
     else if(ex.grip==="ez"||ex.grip==="ezfront")bar(rig.sides[1].hand,8);
     /* main bench aligned with the lying torso (mirror of SVG drawBenchAuto) */
@@ -1444,7 +1477,7 @@ function show3D(ex,day,stageEl){
         const leg=mk(new THREE.CylinderGeometry(1.6*SS,1.6*SS,Math.max(ly,.05),8),dark);
         leg.position.set((lx-150)*SS,ly/2,0);scene.add(leg);
       }};
-    if(ex.prop==="benchR")box(226,300,200,210);
+    if(ex.prop==="benchR")box(226,300,196,206);
     if(ex.prop==="benchL")box(42,114,206,216);
     if(ex.prop==="seat")box(104,170,214,224);
   }
@@ -1508,10 +1541,11 @@ function show3D(ex,day,stageEl){
     st.dist=Math.min(11,Math.max(3.2,st.dist*(1+e.deltaY*.001)))},{passive:false});
   function loop(){
     const now=performance.now();
-    const t=(now-t0)%total;
-    const si=Math.min(Math.floor(t/(dur+hold)),segs.length-1);
-    const f=Math.min((t-si*(dur+hold))/dur,1);
+    let t=(now-t0)%total, si=0;
+    while(si<segs.length-1&&t>=durs[si%2]+hold){t-=durs[si%2]+hold;si++}
+    const f=Math.min(t/durs[si%2],1);
     rig.apply(lerpPose(segs[si][0],segs[si][1],ease(f)));
+    rig.breathe(now);
     const pulse=.28+.18*Math.sin(now/350);
     glowMeshes.forEach(m=>m.material.emissiveIntensity=pulse);
     if(si!==lastSi){lastSi=si;
