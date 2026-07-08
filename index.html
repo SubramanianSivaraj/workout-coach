@@ -67,6 +67,20 @@
   .rest-card h3{font-size:18px;margin:10px 0 6px}
   .rest-card p{font-size:13px;color:var(--muted);line-height:1.6}
 
+  .fuel{margin-top:16px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:16px}
+  .fuel .f-head{font-size:13px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;margin-bottom:10px}
+  .fuel .f-goal{font-size:12.5px;color:#c6cbda;line-height:1.5}
+  .fuel .f-sec{margin-top:13px}
+  .fuel .f-sec .t{display:block;font-size:13px;font-weight:700;margin-bottom:4px}
+  .fuel .f-sec p{font-size:12.5px;color:var(--muted);line-height:1.55}
+  .fuel .f-chips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px}
+  .fuel .f-chip{font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;color:#0b0d12}
+  .fuel .f-cta{margin-top:12px;width:100%;padding:11px;border-radius:12px;
+    border:1px dashed var(--line);background:none;color:var(--muted);
+    font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .fuel .f-note{margin-top:12px;font-size:11px;color:#5b647c;line-height:1.5}
   .guidelines{margin-top:26px;background:var(--card);border:1px solid var(--line);
     border-radius:var(--radius);padding:18px}
   .guidelines h3{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
@@ -255,7 +269,7 @@
       <li><b>Form first:</b> technique always beats heavier weight.</li>
     </ul>
   </section>
-  <footer>Workout Coach v5.1 · 3D + 2D demos · works offline · your settings never leave this device</footer>
+  <footer>Workout Coach v6 · train + fuel · works offline · your settings never leave this device</footer>
 </div>
 
 <div class="overlay" id="overlay"></div>
@@ -299,6 +313,20 @@
       <button class="opt" data-v="45"><div class="o-name">45 min</div><div class="o-desc">the full plan</div></button>
       <button class="opt" data-v="60"><div class="o-name">60 min</div><div class="o-desc">extra volume</div></button>
     </div>
+    <h4>Fuel guidance (optional)</h4>
+    <div class="switch-row">
+      <div class="s-txt"><div class="o-name">My body weight</div>
+        <div class="o-desc">Only used to size your protein &amp; carb targets on the Fuel card. Stored on this phone.</div></div>
+      <input id="set-wt" type="number" inputmode="decimal" min="30" max="250" placeholder="kg"
+        style="width:82px;background:#12151e;border:1px solid var(--line);border-radius:10px;color:var(--text);
+        font-size:15px;font-weight:700;padding:10px;text-align:center;font-family:inherit">
+    </div>
+    <div class="opts row" style="margin-top:9px" id="opt-food">
+      <button class="opt" data-v="v"><div class="o-name">🥦 Veg</div>
+        <div class="o-desc">paneer, dal, curd, soy</div></button>
+      <button class="opt" data-v="nv"><div class="o-name">🍗 Non-veg</div>
+        <div class="o-desc">eggs, chicken, fish too</div></button>
+    </div>
     <h4>Weights</h4>
     <div class="switch-row">
       <div class="s-txt"><div class="o-name">Remember my working weights</div>
@@ -321,8 +349,8 @@ const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},
           set(k,v){try{localStorage.setItem(k,v)}catch(e){}},
           del(k){try{localStorage.removeItem(k)}catch(e){}},
           keys(){try{return Object.keys(localStorage)}catch(e){return[]}}};
-let P={goal:"m",time:45};
-try{const p=JSON.parse(ls.get("wc-profile"));if(p&&p.goal&&p.time)P=p}catch(e){}
+let P={goal:"m",time:45,food:"nv",wt:null};
+try{const p=JSON.parse(ls.get("wc-profile"));if(p&&p.goal&&p.time)P={...P,...p}}catch(e){}
 let weightsOn=ls.get("wc-weights")==="1";
 
 const GOAL_META={
@@ -976,6 +1004,45 @@ function renderProfileChip(){
     `${gm.emoji} ${gm.label} &nbsp;·&nbsp; ⏱ ${P.time} min`;
 }
 
+/* ---- Fuel card: goal- and weight-scaled pre/post-workout guidance ---- */
+function fuelHTML(day){
+  const wt=P.wt, veg=P.food==="v";
+  const gp=wt?Math.max(20,Math.round(wt*.3/5)*5):null;          /* post protein */
+  const gc=wt?Math.round(wt*(P.goal==="e"?1:.8)/5)*5:null;      /* post carbs   */
+  const daily=wt?Math.round(wt*1.6)+"–"+Math.round(wt*2.2)+" g":null;
+  const protEx=veg?"150 g paneer · a big bowl of dal + curd · soy chunks or a whey/soy scoop in milk"
+                  :"4 eggs · 120 g chicken · 150 g fish · a whey scoop in milk";
+  const preEx=veg?"oats + banana · poha or upma · curd rice"
+                 :"oats + banana · poha or upma · eggs + toast";
+  const goalLine={
+    m:"Building muscle — eat a little above appetite today, protein first.",
+    s:"Strength day — don't lift hungry: the carbs you eat 2 h out power the big sets.",
+    e:"Tone & endurance — keep meals lighter and hydrate more than you think you need."}[P.goal];
+  const big=(activeDay==="Tue"||activeDay==="Fri")
+    ?`<p style="margin-top:6px">🔥 Big-muscle day — add an extra fist-sized portion of carbs after training.</p>`:"";
+  return `<div class="fuel">
+    <div class="f-head">🍽 Fuel — ${day.name} day</div>
+    <div class="f-goal">${goalLine}</div>
+    <div class="f-sec"><span class="t">Before · ~2 h out</span>
+      <p>Carbs + some protein, easy on fat: ${preEx}. And ~500 ml water.</p></div>
+    <div class="f-sec"><span class="t">Before · 30 min out (optional)</span>
+      <p>Something small and quick — a banana or 2–3 dates. Nothing heavy.</p></div>
+    <div class="f-sec"><span class="t">After · within 1 h</span>
+      ${wt?`<div class="f-chips">
+        <span class="f-chip" style="background:${day.g}">Protein ~${gp} g</span>
+        <span class="f-chip" style="background:${day.g}">Carbs ~${gc} g</span>
+        <span class="f-chip" style="background:${day.g}">Daily protein ${daily}</span></div>`:""}
+      <p>${wt?`~${gp} g`:"~0.3 g per kg bodyweight"} protein: ${protEx}.
+      Carbs to refill: rice · roti · potatoes · fruit.${wt?"":" Daily reference: 1.6–2.2 g protein per kg."}</p>${big}</div>
+    <div class="f-sec"><span class="t">Avoid</span>
+      <p>❌ Fried or heavy-fat meals and big fiber loads in the 2 h before ·
+      ❌ training completely empty · ❌ alcohol afterwards (blunts recovery) ·
+      ❌ skipping the post-workout meal.</p></div>
+    ${wt?"":`<button class="f-cta" id="fuel-cta">⚙️ Set your weight in settings for exact gram targets</button>`}
+    <div class="f-note">General guidance, not medical or dietetic advice — adjust for your own health conditions.</div>
+  </div>`;
+}
+
 function render(){
   renderProfileChip();
   const day=DAYS.find(x=>x.d===activeDay), list=dayList(activeDay);
@@ -1002,11 +1069,14 @@ function render(){
           <svg viewBox="0 0 10 12" fill="${day.color}"><path d="M0 0 L10 6 L0 12 Z"/></svg></div>
       </div>`;
     });
+    html+=fuelHTML(day);
   }
   main.innerHTML=html;
   main.querySelectorAll(".card").forEach(c=>c.onclick=()=>openSheet(+c.dataset.i));
   const sb=document.getElementById("start-workout");
   if(sb)sb.onclick=()=>startWorkout();
+  const fc=document.getElementById("fuel-cta");
+  if(fc)fc.onclick=()=>openSetup(false);
 }
 
 /* ================= demo modal ================= */
@@ -1061,19 +1131,22 @@ document.getElementById("m-close").onclick=closeSheet;
 
 /* ================= setup / settings ================= */
 const setup=document.getElementById("setup");
-let selGoal=P.goal, selTime=P.time, selWeights=weightsOn;
+let selGoal=P.goal, selTime=P.time, selWeights=weightsOn, selFood=P.food;
 
 function paintSetup(){
   document.querySelectorAll("#opt-goal .opt").forEach(b=>
     b.classList.toggle("sel",b.dataset.v===selGoal));
   document.querySelectorAll("#opt-time .opt").forEach(b=>
     b.classList.toggle("sel",+b.dataset.v===selTime));
+  document.querySelectorAll("#opt-food .opt").forEach(b=>
+    b.classList.toggle("sel",b.dataset.v===selFood));
   document.getElementById("sw-weights").classList.toggle("on",selWeights);
   const hasW=ls.keys().some(k=>k.startsWith("wc-w-"));
   document.getElementById("erase-w").style.display=hasW?"block":"none";
 }
 function openSetup(firstRun){
-  selGoal=P.goal;selTime=P.time;selWeights=weightsOn;
+  selGoal=P.goal;selTime=P.time;selWeights=weightsOn;selFood=P.food;
+  document.getElementById("set-wt").value=P.wt||"";
   document.getElementById("setup-title").textContent=firstRun?"Make it yours":"Settings";
   document.getElementById("setup-skip").style.display=firstRun?"block":"none";
   paintSetup();
@@ -1085,13 +1158,16 @@ document.querySelectorAll("#opt-goal .opt").forEach(b=>
   b.onclick=()=>{selGoal=b.dataset.v;paintSetup()});
 document.querySelectorAll("#opt-time .opt").forEach(b=>
   b.onclick=()=>{selTime=+b.dataset.v;paintSetup()});
+document.querySelectorAll("#opt-food .opt").forEach(b=>
+  b.onclick=()=>{selFood=b.dataset.v;paintSetup()});
 document.getElementById("sw-weights").onclick=()=>{selWeights=!selWeights;paintSetup()};
 document.getElementById("erase-w").onclick=()=>{
   ls.keys().filter(k=>k.startsWith("wc-w-")).forEach(k=>ls.del(k));
   paintSetup();
 };
 document.getElementById("setup-save").onclick=()=>{
-  P={goal:selGoal,time:selTime};
+  const w=parseFloat(document.getElementById("set-wt").value);
+  P={goal:selGoal,time:selTime,food:selFood,wt:(w>=30&&w<=250)?w:null};
   ls.set("wc-profile",JSON.stringify(P));
   weightsOn=selWeights;
   if(weightsOn)ls.set("wc-weights","1");else ls.del("wc-weights");
