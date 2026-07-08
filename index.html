@@ -124,6 +124,12 @@
   .t3-label{position:absolute;top:12px;right:14px;z-index:2;font-size:12px;
     font-weight:800;letter-spacing:.14em;pointer-events:none}
   .stage canvas{display:block;width:100%;height:auto;touch-action:none}
+  .anat-wrap{position:relative;width:100%;aspect-ratio:1/1}
+  .anat{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  .anat-a{animation:anatA 4.2s ease-in-out infinite}
+  .anat-b{animation:anatB 4.2s ease-in-out infinite}
+  @keyframes anatA{0%,40%{opacity:1}50%,90%{opacity:0}100%{opacity:1}}
+  @keyframes anatB{0%,40%{opacity:0}50%,90%{opacity:1}100%{opacity:0}}
   .wrow{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;
     padding:12px 14px;display:flex;align-items:center;gap:10px}
   .wrow label{font-size:12.5px;color:var(--muted);flex:1;line-height:1.4}
@@ -1125,7 +1131,7 @@ function openSheet(i){
   applyStageMode();
 }
 function closeSheet(){overlay.classList.remove("open");sheet.classList.remove("open");
-  document.body.style.overflow="";cancelAnimationFrame(rafId);hide3D();SHEET=null}
+  document.body.style.overflow="";cancelAnimationFrame(rafId);hide3D();hideAnatomy();SHEET=null}
 overlay.onclick=closeSheet;
 document.getElementById("m-close").onclick=closeSheet;
 
@@ -1358,20 +1364,48 @@ function pose3(ex,p){
   if(ex.n==="Russian Twists")m.twist=(p===ex.poses[0]?22:-22);
   return m;
 }
+/* v7 pilot: AI anatomy illustrations (two camera-matched poses, crossfaded).
+   Only exercises listed here have art; the rest keep 3D/2D. */
+const ANATOMY={
+  "Deadlift":{a:"assets/deadlift-a.jpeg",b:"assets/deadlift-b.jpeg"}
+};
+function hasAnatomy(ex){return !!ANATOMY[ex.n]}
+function viewsFor(ex){const v=[];if(hasAnatomy(ex))v.push("anatomy");v.push("3d","2d");return v}
+function curView(ex){
+  const vs=viewsFor(ex), stored=ls.get("wc-view");
+  if(stored&&vs.includes(stored))return stored;
+  return hasAnatomy(ex)?"anatomy":"2d";
+}
+let ANAT=null;
+function showAnatomy(ex){
+  hideAnatomy();
+  const art=ANATOMY[ex.n];
+  const wrap=document.createElement("div");wrap.className="anat-wrap";wrap.id="anat-wrap";
+  const ia=new Image();ia.src=art.a;ia.alt="";ia.className="anat anat-a";
+  const ib=new Image();ib.src=art.b;ib.alt="";ib.className="anat anat-b";
+  wrap.appendChild(ia);wrap.appendChild(ib);
+  sheet.querySelector(".stage").appendChild(wrap);
+  ANAT=wrap;
+}
+function hideAnatomy(){if(ANAT){ANAT.remove();ANAT=null}}
+const VIEW_LABEL={anatomy:"ANATOMY","3d":"3D","2d":"2D"};
 function applyStageMode(){
   if(!SHEET)return;
   const {ex,day}=SHEET;
   const svg=document.getElementById("stage-svg"), tb=document.getElementById("t3-toggle");
-  const ok=can3D(ex);
-  tb.style.display=ok?"block":"none";
-  const on=ok&&ls.get("wc-3d")==="1";
-  tb.classList.toggle("on",on);
-  tb.style.background=on?day.g:"";
-  if(on){cancelAnimationFrame(rafId);svg.style.display="none";show3D(ex,day)}
-  else{hide3D();svg.style.display="";animate(svg,ex,day.color)}
+  const vs=viewsFor(ex), view=curView(ex);
+  tb.style.display=vs.length>1?"block":"none";
+  tb.textContent=VIEW_LABEL[view];
+  tb.classList.add("on");tb.style.background=day.g;
+  cancelAnimationFrame(rafId);hide3D();hideAnatomy();svg.style.display="none";
+  if(view==="anatomy")showAnatomy(ex);
+  else if(view==="3d"&&can3D(ex))show3D(ex,day);
+  else{svg.style.display="";animate(svg,ex,day.color)}
 }
 document.getElementById("t3-toggle").onclick=()=>{
-  if(ls.get("wc-3d")==="1")ls.del("wc-3d");else ls.set("wc-3d","1");
+  if(!SHEET)return;
+  const vs=viewsFor(SHEET.ex), i=vs.indexOf(curView(SHEET.ex));
+  ls.set("wc-view",vs[(i+1)%vs.length]);
   applyStageMode();
 };
 /* Jointed rig. 2D pose convention → 3D: screen x → +X, screen y-down → -Y.
